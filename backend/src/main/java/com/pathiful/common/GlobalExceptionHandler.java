@@ -1,5 +1,6 @@
 package com.pathiful.common;
 
+import com.pathiful.rating.DuplicateRatingException;
 import com.pathiful.weather.WeatherServiceException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
@@ -94,6 +95,18 @@ public class GlobalExceptionHandler {
                 request.getRequestURI()
         );
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+    }
+
+    @ExceptionHandler(DuplicateRatingException.class)
+    public ResponseEntity<ApiError> handleDuplicateRating(DuplicateRatingException ex,
+                                                           HttpServletRequest request) {
+        ApiError error = new ApiError(
+                HttpStatus.CONFLICT.value(),
+                "DUPLICATE_RATING",
+                ex.getMessage(),
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
     }
 
     @ExceptionHandler(WeatherServiceException.class)
