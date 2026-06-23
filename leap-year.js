@@ -46,4 +46,9 @@ function daysUntilNextLeapYear() {
     console.log(`Noch ${diffDays} Tage bis zum nächsten Schaltjahr`);
 }
 
-daysUntilNextLeapYear();
+// Nur ausführen, wenn direkt als Script aufgerufen (nicht via require/import)
+if (require.main === module) {
+    daysUntilNextLeapYear();
+}
+
+module.exports = { isLeapYear, formatDate, daysUntilNextLeapYear };
