@@ -1,5 +1,6 @@
 package com.pathiful.common;
 
+import com.pathiful.weather.WeatherServiceException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -93,6 +94,19 @@ public class GlobalExceptionHandler {
                 request.getRequestURI()
         );
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+    }
+
+    @ExceptionHandler(WeatherServiceException.class)
+    public ResponseEntity<ApiError> handleWeatherService(WeatherServiceException ex,
+                                                          HttpServletRequest request) {
+        log.warn("Weather service error on {}: {}", request.getRequestURI(), ex.getMessage());
+        ApiError error = new ApiError(
+                HttpStatus.SERVICE_UNAVAILABLE.value(),
+                "SERVICE_UNAVAILABLE",
+                ex.getMessage(),
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(error);
     }
 
     @ExceptionHandler(Exception.class)

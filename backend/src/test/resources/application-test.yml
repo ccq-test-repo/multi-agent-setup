@@ -1,0 +1,24 @@
+# Test profile: uses H2 in-memory database, disables Flyway.
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;MODE=PostgreSQL
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+    show-sql: false
+  flyway:
+    enabled: false
+  security:
+    filter:
+      order: 10
+
+logging:
+  level:
+    root: WARN
+    com.pathiful: DEBUG
