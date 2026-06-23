@@ -9,4 +9,6 @@ import java.util.List;
 public interface RouteRepository extends JpaRepository<Route, Long> {
 
     List<Route> findByOwnerIdOrderByCreatedAtDesc(Long ownerId);
+
+    List<Route> findAllByOrderByCreatedAtDesc();
 }

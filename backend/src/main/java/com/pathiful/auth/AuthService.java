@@ -57,8 +57,12 @@ public class AuthService {
     /**
      * Meldet einen Benutzer an.
      *
+     * Wenn der Benutzer ADMIN ist und MFA aktiviert hat, wird ein MFA-Challenge
+     * zurückgegeben (requiresMfa=true) und {@link #completeMfaLogin(String, String)}
+     * muss für das endgültige Token aufgerufen werden.
+     *
      * @param request Login-Daten
-     * @return AuthResponse mit Token
+     * @return AuthResponse mit Token oder MFA-Challenge
      * @throws IllegalArgumentException bei ungültigen Credentials
      */
     @Transactional
@@ -73,9 +77,38 @@ public class AuthService {
         user.setLastLoginAt(java.time.LocalDateTime.now());
         userRepository.save(user);
 
+        // ADMIN mit MFA → MFA-Challenge auslösen
+        if (user.getRole() == User.Role.ADMIN && user.isMfaEnabled()) {
+            String sessionId = tokenService.createMfaSession(user.getId());
+            log.info("User login requires MFA: id={}, email={}", user.getId(), user.getEmail());
+            return AuthResponse.mfaChallenge(
+                    user.getId(), user.getEmail(), user.getRole().name(), sessionId);
+        }
+
         String token = tokenService.createToken(user);
 
         log.info("User logged in: id={}, email={}", user.getId(), user.getEmail());
+
+        return new AuthResponse(user.getId(), user.getEmail(), user.getRole().name(), token);
+    }
+
+    /**
+     * Schließt einen MFA-Challenge-Login ab. Gültig für 5 Minuten nach Login.
+     *
+     * @param mfaSessionId die Session-ID aus dem Login-Response
+     * @param code         der TOTP-Code
+     * @return AuthResponse mit Token
+     * @throws IllegalArgumentException bei ungültigem Code oder abgelaufener Session
+     */
+    @Transactional
+    public AuthResponse completeMfaLogin(String mfaSessionId, String code) {
+        Long userId = tokenService.validateMfaSession(mfaSessionId, code);
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Benutzer nicht gefunden."));
+
+        String token = tokenService.createToken(user);
+        log.info("MFA login completed: id={}, email={}", user.getId(), user.getEmail());
 
         return new AuthResponse(user.getId(), user.getEmail(), user.getRole().name(), token);
     }
@@ -118,6 +151,7 @@ public class AuthService {
 
     /**
      * ADMIN: Überprüft einen MFA-Code (simuliert).
+     * Wird vom bestehenden /admin/mfa/verify-Endpunkt aufgerufen.
      */
     public boolean verifyMfa(Long userId, String code) {
         User user = userRepository.findById(userId)

@@ -60,6 +60,17 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
 
+    /**
+     * POST /api/auth/mfa/complete – Abschluss eines MFA-Challenge-Logins.
+     * Öffentlicher Endpunkt (noch kein Token erforderlich).
+     * Akzeptiert { sessionId, code } und gibt das AuthResponse mit Token zurück.
+     */
+    @PostMapping("/mfa/complete")
+    public ResponseEntity<AuthResponse> completeMfaLogin(@Valid @RequestBody MfaVerifyRequest request) {
+        AuthResponse response = authService.completeMfaLogin(request.getSessionId(), request.getCode());
+        return ResponseEntity.ok(response);
+    }
+
     @PostMapping("/admin/mfa/verify")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Map<String, Boolean>> verifyMfa(

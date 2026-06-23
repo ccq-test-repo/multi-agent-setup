@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.security.SecureRandom;
+import java.time.Instant;
 import java.util.Base64;
 import java.util.Map;
 import java.util.Optional;
@@ -24,8 +25,10 @@ public class TokenService {
 
     private static final Logger log = LoggerFactory.getLogger(TokenService.class);
     private static final int TOKEN_BYTES = 32;
+    private static final int MFA_SESSION_TIMEOUT_SECONDS = 300; // 5 Minuten
 
     private final Map<String, TokenEntry> tokens = new ConcurrentHashMap<>();
+    private final Map<String, MfaSession> mfaSessions = new ConcurrentHashMap<>();
 
     @PostConstruct
     void logWarning() {
@@ -71,8 +74,59 @@ public class TokenService {
     }
 
     // -----------------------------------------------------------------------
+    // MFA-Session
+    // -----------------------------------------------------------------------
+
+    /**
+     * Erzeugt eine MFA-Session für einen Admin-Login.
+     * Gültig für 5 Minuten.
+     */
+    public String createMfaSession(Long userId) {
+        // Alte Sessions des Benutzers entfernen
+        mfaSessions.entrySet().removeIf(e -> e.getValue().userId.equals(userId));
+
+        SecureRandom random = new SecureRandom();
+        byte[] bytes = new byte[16];
+        random.nextBytes(bytes);
+        String sessionId = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+
+        mfaSessions.put(sessionId, new MfaSession(
+                userId,
+                Instant.now().getEpochSecond(),
+                MFA_SESSION_TIMEOUT_SECONDS));
+        return sessionId;
+    }
+
+    /**
+     * Validiert einen MFA-Code gegen eine Session.
+     * Gibt die userId zurück oder wirft IllegalArgumentException.
+     */
+    public Long validateMfaSession(String sessionId, String code) {
+        MfaSession session = mfaSessions.get(sessionId);
+        if (session == null) {
+            throw new IllegalArgumentException("Ungültige MFA-Session.");
+        }
+        long now = Instant.now().getEpochSecond();
+        if (now - session.createdAt > session.timeoutSeconds) {
+            mfaSessions.remove(sessionId);
+            throw new IllegalArgumentException("MFA-Session abgelaufen.");
+        }
+
+        // Simulierte TOTP-Prüfung
+        boolean valid = "123456".equals(code) || "000000".equals(code);
+        if (!valid) {
+            throw new IllegalArgumentException("Ungültiger MFA-Code.");
+        }
+
+        mfaSessions.remove(sessionId);
+        return session.userId;
+    }
+
+    // -----------------------------------------------------------------------
     // TokenEntry
     // -----------------------------------------------------------------------
 
     public record TokenEntry(Long userId, String email, String role) {}
+
+    private record MfaSession(Long userId, long createdAt, long timeoutSeconds) {}
 }

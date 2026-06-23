@@ -224,10 +224,11 @@ async function handleMfaChallenge(sessionId) {
   const code = prompt('ADMIN-MFA erforderlich. Bitte TOTP-Code eingeben (Simulation: 123456):');
   if (!code) return;
   try {
-    await api('/auth/admin/mfa/verify', {
+    const data = await api('/auth/mfa/complete', {
       method: 'POST',
       body: { sessionId, code },
     });
+    saveAuth(data.token, data.userId, data.role);
   } catch (err) {
     alert('MFA-Verifikation fehlgeschlagen: ' + err.message);
   }

@@ -179,6 +179,27 @@ public class RouteService {
     }
 
     /**
+     * Gibt alle Routen des angemeldeten Benutzers zurück (sortiert nach Erstelldatum).
+     * Admins sehen alle Routen.
+     *
+     * @param user der angemeldete Benutzer
+     * @return Liste aller RouteResponse (ohne Wegpunkte)
+     */
+    @Transactional(readOnly = true)
+    public List<RouteResponse> getAllRoutes(User user) {
+        List<Route> routes;
+        if (user.getRole() == User.Role.ADMIN) {
+            routes = routeRepository.findAllByOrderByCreatedAtDesc();
+        } else {
+            routes = routeRepository.findByOwnerIdOrderByCreatedAtDesc(user.getId());
+        }
+
+        return routes.stream()
+                .map(route -> RouteResponse.fromEntity(route, List.of()))
+                .toList();
+    }
+
+    /**
      * Ruft eine gespeicherte Route ab.
      *
      * @param id   Routen-ID

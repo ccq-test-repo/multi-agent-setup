@@ -92,10 +92,10 @@ class RouteControllerTest {
                                 """))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(1))
-                .andExpect(jsonPath("$.routeType").value("ROUNDTRIP"))
+                .andExpect(jsonPath("$.type").value("ROUNDTRIP"))
                 .andExpect(jsonPath("$.transportMode").value("BIKE"))
-                .andExpect(jsonPath("$.distanceKm").value(10.0))
-                .andExpect(jsonPath("$.scenicScore").value(7));
+                .andExpect(jsonPath("$.totalDistance").value(10.0))
+                .andExpect(jsonPath("$.sceneryScore").value(7));
     }
 
     // -----------------------------------------------------------------------
@@ -242,9 +242,9 @@ class RouteControllerTest {
                                 """))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(2))
-                .andExpect(jsonPath("$.routeType").value("DESTINATION"))
+                .andExpect(jsonPath("$.type").value("DESTINATION"))
                 .andExpect(jsonPath("$.transportMode").value("WALK"))
-                .andExpect(jsonPath("$.distanceKm").value(12.5));
+                .andExpect(jsonPath("$.totalDistance").value(12.5));
     }
 
     @Test
@@ -317,8 +317,8 @@ class RouteControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.name").value("Gespeicherte Route"))
-                .andExpect(jsonPath("$.points[0].lat").value(48.135))
-                .andExpect(jsonPath("$.points[0].lon").value(11.582));
+                .andExpect(jsonPath("$.points[0].latitude").value(48.135))
+                .andExpect(jsonPath("$.points[0].longitude").value(11.582));
     }
 
     @Test

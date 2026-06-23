@@ -8,6 +8,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/routes")
 public class RouteController {
@@ -44,6 +46,18 @@ public class RouteController {
 
         RouteResponse response = routeService.createDestination(request, user);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    /**
+     * GET /api/routes
+     *
+     * Gibt alle Routen des angemeldeten Benutzers zurück (sortiert nach Erstelldatum).
+     */
+    @GetMapping
+    public ResponseEntity<List<RouteResponse>> getAllRoutes(
+            @AuthenticationPrincipal User user) {
+        List<RouteResponse> routes = routeService.getAllRoutes(user);
+        return ResponseEntity.ok(routes);
     }
 
     /**

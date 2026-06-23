@@ -1,10 +1,12 @@
 package com.pathiful.route;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.LocalDateTime;
 import java.util.List;
 
 /**
  * Response-DTO for route endpoints.
+ * Feldnamen per @JsonProperty auf Frontend-Erwartungen gemappt.
  */
 public class RouteResponse {
 
@@ -44,18 +46,23 @@ public class RouteResponse {
     public void setId(Long id) { this.id = id; }
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
+    @JsonProperty("type")
     public String getRouteType() { return routeType; }
     public void setRouteType(String routeType) { this.routeType = routeType; }
     public String getTransportMode() { return transportMode; }
     public void setTransportMode(String transportMode) { this.transportMode = transportMode; }
+    @JsonProperty("totalDistance")
     public Double getDistanceKm() { return distanceKm; }
     public void setDistanceKm(Double distanceKm) { this.distanceKm = distanceKm; }
+    @JsonProperty("totalDuration")
     public Integer getDurationMinutes() { return durationMinutes; }
     public void setDurationMinutes(Integer durationMinutes) { this.durationMinutes = durationMinutes; }
     public Integer getElevationGainMeters() { return elevationGainMeters; }
     public void setElevationGainMeters(Integer elevationGainMeters) { this.elevationGainMeters = elevationGainMeters; }
+    @JsonProperty("sceneryScore")
     public Integer getScenicScore() { return scenicScore; }
     public void setScenicScore(Integer scenicScore) { this.scenicScore = scenicScore; }
+    @JsonProperty("publicRoute")
     public String getVisibility() { return visibility; }
     public void setVisibility(String visibility) { this.visibility = visibility; }
     public List<RoutePointDto> getPoints() { return points; }
@@ -89,8 +96,10 @@ public class RouteResponse {
         public void setSequenceNumber(Integer sequenceNumber) { this.sequenceNumber = sequenceNumber; }
         public String getPointType() { return pointType; }
         public void setPointType(String pointType) { this.pointType = pointType; }
+        @JsonProperty("latitude")
         public Double getLat() { return lat; }
         public void setLat(Double lat) { this.lat = lat; }
+        @JsonProperty("longitude")
         public Double getLon() { return lon; }
         public void setLon(Double lon) { this.lon = lon; }
     }
