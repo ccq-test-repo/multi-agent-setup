@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#1a4731">
+  <meta name="description" content="Pathiful – Routenplanung mit Landschafts-Scoring, Wetter und GPS-Tracking">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+  <link rel="stylesheet" href="/styles/main.css">
+  <title>Pathiful</title>
+</head>
+<body>
+  <div class="app-layout">
+
+    <!-- ===== Sidebar ===== -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <span class="logo-icon">🌲</span>
+        <h1>Pathiful</h1>
+        <button class="btn-icon" id="menuToggleBtn" title="Menü" style="background:transparent;color:white;width:36px;height:36px;font-size:1.2rem;">☰</button>
+      </div>
+
+      <div class="offline-indicator" id="offlineIndicator">📡 Keine Verbindung – Offline-Modus</div>
+
+      <!-- Tabs -->
+      <nav class="tab-bar" id="tabBar">
+        <button class="tab-btn active" data-tab="routes">Routen</button>
+        <button class="tab-btn" data-tab="plan">Planen</button>
+        <button class="tab-btn" data-tab="profile">Profil</button>
+      </nav>
+
+      <div class="tab-content" id="tabContent">
+        <!-- ===== Routes Tab ===== -->
+        <div class="tab-pane active" id="tabRoutes">
+          <div class="flex-between mb-1">
+            <h2 style="font-size:1rem;">Meine Routen</h2>
+            <button class="btn btn-sm btn-primary" id="refreshRoutesBtn">⟳</button>
+          </div>
+
+          <!-- Detail panel -->
+          <div class="detail-panel" id="detailPanel">
+            <h3>
+              <span id="detailName">-</span>
+              <button class="btn btn-sm btn-secondary" id="closeDetailBtn">✕</button>
+            </h3>
+            <div class="detail-grid">
+              <div class="detail-item"><span class="label">Typ</span><span id="detailType">-</span></div>
+              <div class="detail-item"><span class="label">Verkehrsmittel</span><span id="detailMode">-</span></div>
+              <div class="detail-item"><span class="label">Distanz</span><span id="detailDistance">-</span></div>
+              <div class="detail-item"><span class="label">Dauer</span><span id="detailDuration">-</span></div>
+              <div class="detail-item"><span class="label">Score</span><span id="detailScore">-</span></div>
+              <div class="detail-item"><span class="label">Sichtbarkeit</span><span id="detailVisibility">-</span></div>
+            </div>
+            <div class="flex gap-sm" style="flex-wrap:wrap;">
+              <button class="btn btn-sm btn-primary" id="showOnMapBtn">🗺️ Auf Karte</button>
+              <button class="btn btn-sm btn-secondary" id="exportKmlBtn">📥 KML</button>
+              <button class="btn btn-sm btn-secondary" id="exportGpxBtn">📥 GPX</button>
+              <button class="btn btn-sm btn-secondary" id="shareRouteBtn">🔗 Teilen</button>
+              <button class="btn btn-sm btn-accent" id="rateRouteBtn">⭐ Bewerten</button>
+              <button class="btn btn-sm btn-danger" id="deleteRouteBtn">🗑️ Löschen</button>
+            </div>
+          </div>
+
+          <!-- Rating form -->
+          <div class="detail-panel" id="ratingPanel" style="margin-bottom:8px;">
+            <h4>Route bewerten</h4>
+            <div class="rating-stars" id="ratingStars">
+              <span class="rating-star" data-value="1">★</span>
+              <span class="rating-star" data-value="2">★</span>
+              <span class="rating-star" data-value="3">★</span>
+              <span class="rating-star" data-value="4">★</span>
+              <span class="rating-star" data-value="5">★</span>
+            </div>
+            <div class="form-group">
+              <textarea id="ratingComment" placeholder="Kommentar (optional)" rows="2"></textarea>
+            </div>
+            <div class="flex gap-sm">
+              <button class="btn btn-sm btn-primary" id="submitRatingBtn">Bewertung senden</button>
+              <button class="btn btn-sm btn-secondary" id="cancelRatingBtn">Abbrechen</button>
+            </div>
+          </div>
+
+          <div class="route-list" id="routeList">
+            <div class="empty-state" id="routeEmpty">
+              <div class="icon">🗺️</div>
+              <p>Noch keine Routen gespeichert.</p>
+              <p class="text-muted mt-1">Erstelle eine Route im Tab "Planen".</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== Plan Tab ===== -->
+        <div class="tab-pane" id="tabPlan">
+          <h2 style="font-size:1rem;margin-bottom:12px;">Route planen</h2>
+
+          <!-- Route type toggle -->
+          <div class="flex gap-sm mb-1">
+            <button class="btn btn-sm btn-primary" id="typeRoundtripBtn">↻ Rundroute</button>
+            <button class="btn btn-sm btn-secondary" id="typeDestinationBtn">→ Zielroute</button>
+          </div>
+
+          <div id="roundtripFields">
+            <div class="form-row">
+              <div class="form-group">
+                <label>Breitengrad (Start)</label>
+                <input type="number" step="any" id="rtStartLat" placeholder="z.B. 48.135">
+              </div>
+              <div class="form-group">
+                <label>Längengrad (Start)</label>
+                <input type="number" step="any" id="rtStartLon" placeholder="z.B. 11.582">
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Distanz (km)</label>
+              <input type="number" step="0.1" min="0.1" id="rtDistance" placeholder="z.B. 10">
+            </div>
+          </div>
+
+          <div id="destinationFields" class="hidden">
+            <div class="form-row">
+              <div class="form-group">
+                <label>Breitengrad (Start)</label>
+                <input type="number" step="any" id="destStartLat" placeholder="z.B. 48.135">
+              </div>
+              <div class="form-group">
+                <label>Längengrad (Start)</label>
+                <input type="number" step="any" id="destStartLon" placeholder="z.B. 11.582">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Breitengrad (Ziel)</label>
+                <input type="number" step="any" id="destEndLat" placeholder="z.B. 48.250">
+              </div>
+              <div class="form-group">
+                <label>Längengrad (Ziel)</label>
+                <input type="number" step="any" id="destEndLon" placeholder="z.B. 11.700">
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Verkehrsmittel</label>
+            <select id="transportMode">
+              <option value="WALK">🚶 Zu Fuß</option>
+              <option value="BIKE" selected>🚲 Fahrrad</option>
+              <option value="CAR">🚗 Auto</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Name (optional)</label>
+            <input type="text" id="routeName" placeholder="z.B. Abendrunde">
+          </div>
+
+          <button class="btn btn-primary btn-block" id="planRouteBtn">🚀 Route berechnen</button>
+        </div>
+
+        <!-- ===== Profile Tab ===== -->
+        <div class="tab-pane" id="tabProfile">
+          <h2 style="font-size:1rem;margin-bottom:12px;">Profil & Zahlung</h2>
+
+          <div class="form-group">
+            <label>E-Mail</label>
+            <input type="email" id="profileEmail" placeholder="deine@email.de">
+          </div>
+          <div class="form-group">
+            <label>Passwort</label>
+            <input type="password" id="profilePassword" placeholder="Passwort">
+          </div>
+          <button class="btn btn-primary btn-block mb-2" id="profileLoginBtn">🔐 Anmelden / Registrieren</button>
+
+          <hr style="border:none;border-top:1px solid var(--color-border);margin:12px 0;">
+
+          <!-- SEPA -->
+          <h3 style="font-size:0.95rem;margin-bottom:8px;">SEPA-Lastschriftmandat</h3>
+          <div id="sepaStatus"></div>
+          <div class="sepa-form" id="sepaForm">
+            <div class="form-group">
+              <label>Kontoinhaber</label>
+              <input type="text" id="sepaAccountHolder" placeholder="Max Mustermann">
+            </div>
+            <div class="form-group">
+              <label>IBAN</label>
+              <input type="text" id="ibanInput" placeholder="DE89 3704 0044 0532 0130 00" maxlength="34">
+            </div>
+            <div class="form-group">
+              <label>BIC (optional)</label>
+              <input type="text" id="bicInput" placeholder="COBADEFFXXX">
+            </div>
+            <div class="form-group">
+              <label>Bankname (optional)</label>
+              <input type="text" id="bankNameInput" placeholder="Deutsche Bank">
+            </div>
+            <div class="sepa-checkbox-group">
+              <label>
+                <input type="checkbox" id="sepaConsent">
+                <span>Ich ermächtige die Pathiful GmbH, Zahlungen von meinem Konto mittels Lastschrift einzuziehen. Zugleich weise ich mein Kreditinstitut an, die von der Pathiful GmbH gezogenen Lastschriften einzulösen. Diese Ermächtigung kann ich jederzeit widerrufen.</span>
+              </label>
+            </div>
+            <button class="btn btn-primary btn-block" id="createSepaBtn">💳 Mandat erteilen</button>
+          </div>
+
+          <!-- Revoke SEPA -->
+          <div id="sepaActiveInfo" class="hidden" style="margin-top:8px;">
+            <div class="detail-panel visible" style="margin-bottom:0;">
+              <div class="flex-between">
+                <span><strong>IBAN:</strong> <span id="sepaIbanDisplay">-</span></span>
+                <span class="badge-roundtrip" style="padding:2px 8px;border-radius:12px;font-size:0.75rem;font-weight:600;" id="sepaStatusBadge">AKTIV</span>
+              </div>
+              <p class="mt-1 text-muted" style="font-size:0.8rem;">Mandatsreferenz: <span id="sepaRefDisplay">-</span></p>
+              <button class="btn btn-sm btn-danger mt-1" id="revokeSepaBtn">⌛ Mandat widerrufen</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- GPS Tracking indicator -->
+      <div style="padding:8px 16px;border-top:1px solid var(--color-border);display:flex;align-items:center;justify-content:space-between;">
+        <div class="tracking-indicator inactive" id="trackingIndicator">
+          <span class="tracking-dot inactive" id="trackingDot"></span>
+          <span id="trackingLabel">Tracking aus</span>
+        </div>
+        <div style="display:flex;gap:4px;">
+          <button class="btn btn-sm btn-primary" id="locateMeBtn">📍</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ===== Map ===== -->
+    <div class="map-container" id="mapContainer">
+      <div id="map"></div>
+
+      <!-- Weather overlay -->
+      <div class="weather-overlay" id="weatherOverlay">
+        <div id="weatherLoading" class="loading" style="margin:0 auto;"></div>
+        <div id="weatherContent" class="hidden">
+          <div class="flex-between" style="gap:8px;">
+            <span class="weather-temp" id="weatherTemp">-°C</span>
+            <span id="weatherIcon" style="font-size:1.5rem;">🌤️</span>
+          </div>
+          <div class="weather-detail">🌧️ <span id="weatherPrecip">-</span> mm | 💨 <span id="weatherWind">-</span> km/h</div>
+        </div>
+      </div>
+
+      <!-- Map controls -->
+      <div class="map-controls">
+        <button id="locateMapBtn" title="Mein Standort">📍</button>
+        <button id="toggleTrackingBtn" title="Tracking">🔄</button>
+        <button id="toggleMapTypeBtn" title="Kartenstil">🗺️</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Share Modal ===== -->
+  <div class="modal-overlay" id="shareModal">
+    <div class="modal">
+      <h2>Route teilen</h2>
+      <p class="text-muted mb-1">Teile den folgenden Link, um die Route anzuzeigen:</p>
+      <div class="share-url-box">
+        <input type="text" id="shareUrlInput" readonly>
+        <button class="btn btn-sm btn-primary" id="copyShareUrlBtn">📋 Kopieren</button>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" id="closeShareModalBtn">Schließen</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+  <script src="/scripts/app.js"></script>
+
+  <!-- Register service worker -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/service-worker.js')
+        .then(() => console.log('SW registered'))
+        .catch(err => console.warn('SW registration failed:', err));
+    }
+  </script>
+</body>
+</html>

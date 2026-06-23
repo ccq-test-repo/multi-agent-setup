@@ -1,0 +1,24 @@
+{
+  "name": "Pathiful",
+  "short_name": "Pathiful",
+  "description": "Routenplanung mit Landschafts-Scoring, Wetter und GPS-Tracking",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1a4731",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='192' height='192' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' fill='%231a4731' rx='32'/%3E%3Cpath d='M96 40 C80 40 64 56 64 76 C64 96 96 140 96 140 C96 140 128 96 128 76 C128 56 112 40 96 40Z' fill='none' stroke='white' stroke-width='6'/%3E%3Ccircle cx='96' cy='72' r='10' fill='white'/%3E%3C/svg%3E",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='512' height='512' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' fill='%231a4731' rx='64'/%3E%3Cpath d='M256 80 C224 80 192 112 192 160 C192 208 256 320 256 320 C256 320 320 208 320 160 C320 112 288 80 256 80Z' fill='none' stroke='white' stroke-width='10'/%3E%3Ccircle cx='256' cy='140' r='22' fill='white'/%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
