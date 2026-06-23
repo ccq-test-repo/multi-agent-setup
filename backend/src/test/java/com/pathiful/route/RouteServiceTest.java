@@ -31,6 +31,9 @@ class RouteServiceTest {
 
     private final LandscapeScoringService scoringService = new LandscapeScoringService();
 
+    @Mock
+    private OrsRoutingService orsRoutingService;
+
     private RouteService routeService;
 
     private User owner;
@@ -40,7 +43,7 @@ class RouteServiceTest {
 
     @BeforeEach
     void setUp() {
-        routeService = new RouteService(routeRepository, routePointRepository, scoringService);
+        routeService = new RouteService(routeRepository, routePointRepository, scoringService, orsRoutingService);
         ReflectionTestUtils.setField(routeService, "orsApiKey", "");
         owner = new User("user@example.com", "hash", User.Role.USER);
     }

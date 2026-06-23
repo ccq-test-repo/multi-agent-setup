@@ -28,19 +28,19 @@ public class RouteService {
     private final RouteRepository routeRepository;
     private final RoutePointRepository routePointRepository;
     private final LandscapeScoringService scoringService;
+    private final OrsRoutingService orsRoutingService;
 
     @Value("${openrouteservice.api-key:}")
     private String orsApiKey;
 
-    @Value("${openrouteservice.base-url:https://api.openrouteservice.org/v2}")
-    private String orsBaseUrl;
-
     public RouteService(RouteRepository routeRepository,
                         RoutePointRepository routePointRepository,
-                        LandscapeScoringService scoringService) {
+                        LandscapeScoringService scoringService,
+                        OrsRoutingService orsRoutingService) {
         this.routeRepository = routeRepository;
         this.routePointRepository = routePointRepository;
         this.scoringService = scoringService;
+        this.orsRoutingService = orsRoutingService;
     }
 
     /**
@@ -255,13 +255,38 @@ public class RouteService {
     private List<RoutePoint> calculateRouteWithOrs(double startLat, double startLon,
                                                      Double destLat, Double destLon,
                                                      RouteTransportMode mode) {
-        // openrouteservice-Integration (für spätere Ausbaustufe)
-        // Sobald ein API-Key vorhanden ist, wird hier ein POST an
-        // {orsBaseUrl}/directions/{profile}?api_key={key} gesendet.
-        // Profile: walking-*, cycling-*, driving-*
-        throw new UnsupportedOperationException(
-                "openrouteservice-Integration ist noch nicht implementiert. " +
-                "Bitte konfigurieren Sie einen API-Key oder nutzen Sie die Schätzung.");
+        log.info("Verwende openrouteservice für Routing: mode={}, start={}/{}",
+                mode, startLat, startLon);
+
+        List<String> orsPoints = orsRoutingService.fetchRoute(startLat, startLon, destLat, destLon, mode);
+
+        if (orsPoints.isEmpty()) {
+            log.warn("ORS lieferte keine Wegpunkte – verwende Fallback-Schätzung");
+            return estimateRoute(startLat, startLon, destLat, destLon,
+                    (destLat != null) ? RouteType.DESTINATION : RouteType.ROUNDTRIP,
+                    10.0);
+        }
+
+        List<RoutePoint> points = new ArrayList<>();
+        for (int i = 0; i < orsPoints.size(); i++) {
+            RoutePoint.PointType pointType;
+            if (i == 0) {
+                pointType = RoutePoint.PointType.START;
+            } else if (destLat != null && i == orsPoints.size() - 1) {
+                pointType = RoutePoint.PointType.DESTINATION;
+            } else {
+                pointType = RoutePoint.PointType.WAYPOINT;
+            }
+
+            RoutePoint point = new RoutePoint();
+            point.setSequenceNumber(i);
+            point.setPointType(pointType);
+            point.setCoordinates(orsPoints.get(i));
+            point.setRecordedAt(LocalDateTime.now());
+            points.add(point);
+        }
+
+        return points;
     }
 
     /**
