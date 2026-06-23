@@ -25,7 +25,6 @@ const STATE = {
   authToken: null,
   authUserId: null,
   authRole: null,
-  offline: !navigator.onLine,
 };
 
 const MAP_STYLES = [
@@ -706,18 +705,6 @@ function switchTab(tabName) {
 }
 
 // =============================================================================
-// Offline / Online
-// =============================================================================
-
-function updateOnlineStatus() {
-  STATE.offline = !navigator.onLine;
-  if (STATE.offline) {
-    show(DOM.offlineIndicator);
-  } else {
-    hide(DOM.offlineIndicator);
-  }
-}
-
 // =============================================================================
 // Init
 // =============================================================================
@@ -728,7 +715,7 @@ function init() {
     // Sidebar / Layout
     sidebar: $('sidebar'),
     menuToggleBtn: $('menuToggleBtn'),
-    offlineIndicator: $('offlineIndicator'),
+
     tabBar: $('tabBar'),
     tabContent: $('tabContent'),
     // Routes Tab
@@ -818,8 +805,6 @@ function init() {
   // Auth laden
   loadAuth();
 
-  // Offline-Status initialisieren
-  updateOnlineStatus();
 
   // -------------------------------------------------------
   // Event-Handler
@@ -894,10 +879,6 @@ function init() {
   window.addEventListener('click', e => {
     if (e.target === DOM.shareModal) hideShareModal();
   });
-
-  // Offline/Online
-  window.addEventListener('online', updateOnlineStatus);
-  window.addEventListener('offline', updateOnlineStatus);
 
   // Karten-Idle: Wetter laden
   let weatherTimeout;

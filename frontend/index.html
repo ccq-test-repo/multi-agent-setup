@@ -21,8 +21,6 @@
         <button class="btn-icon" id="menuToggleBtn" title="Menü" style="background:transparent;color:white;width:36px;height:36px;font-size:1.2rem;">☰</button>
       </div>
 
-      <div class="offline-indicator" id="offlineIndicator">📡 Keine Verbindung – Offline-Modus</div>
-
       <!-- Tabs -->
       <nav class="tab-bar" id="tabBar">
         <button class="tab-btn active" data-tab="routes">Routen</button>
@@ -270,14 +268,5 @@
 
   <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
   <script src="/scripts/app.js"></script>
-
-  <!-- Register service worker -->
-  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/service-worker.js')
-        .then(() => console.log('SW registered'))
-        .catch(err => console.warn('SW registration failed:', err));
-    }
-  </script>
 </body>
 </html>
