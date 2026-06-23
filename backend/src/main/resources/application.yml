@@ -20,6 +20,17 @@ spring:
     locations: classpath:db/migration
     baseline-on-migrate: true
 
+openrouteservice:
+  api-key: ${OPENROUTESERVICE_API_KEY:}
+  base-url: ${OPENROUTESERVICE_BASE_URL:https://api.openrouteservice.org/v2}
+
+open-meteo:
+  base-url: ${OPEN_METEO_BASE_URL:https://api.open-meteo.com/v1}
+
+weather:
+  cache:
+    minutes: ${WEATHER_CACHE_MINUTES:30}
+
 logging:
   level:
     root: ${LOG_LEVEL:INFO}
