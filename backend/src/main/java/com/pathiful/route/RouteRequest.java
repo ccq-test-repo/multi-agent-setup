@@ -4,6 +4,7 @@ import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 
 /**
  * Request-DTO for POST /api/routes/roundtrip and /api/routes/destination.
@@ -21,13 +22,19 @@ public class RouteRequest {
     private String startLon;
 
     // Optional: nur für DESTINATION
+    @DecimalMin(value = "-90", message = "destLat muss zwischen -90 und 90 liegen")
+    @DecimalMax(value = "90", message = "destLat muss zwischen -90 und 90 liegen")
     private String destLat;
+
+    @DecimalMin(value = "-180", message = "destLon muss zwischen -180 und 180 liegen")
+    @DecimalMax(value = "180", message = "destLon muss zwischen -180 und 180 liegen")
     private String destLon;
 
-    @NotNull(message = "Verkehrsmittel ist erforderlich")
+    @NotBlank(message = "Verkehrsmittel ist erforderlich")
     private String transportMode; // WALK, BIKE, CAR
 
     // Optional: nur für ROUNDTRIP
+    @Positive(message = "Distanz muss positiv sein")
     private Double distanceKm;
 
     private String name;
