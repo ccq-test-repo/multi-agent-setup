@@ -73,13 +73,13 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
     }
 
-    @ExceptionHandler(AccessDeniedException.class)
-    public ResponseEntity<ApiError> handleAccessDenied(AccessDeniedException ex,
+    @ExceptionHandler({AccessDeniedException.class, SecurityException.class})
+    public ResponseEntity<ApiError> handleAccessDenied(RuntimeException ex,
                                                         HttpServletRequest request) {
         ApiError error = new ApiError(
                 HttpStatus.FORBIDDEN.value(),
                 "FORBIDDEN",
-                "Keine ausreichende Berechtigung.",
+                ex.getMessage(),
                 request.getRequestURI()
         );
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);

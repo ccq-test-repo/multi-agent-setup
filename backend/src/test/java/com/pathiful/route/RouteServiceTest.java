@@ -46,6 +46,7 @@ class RouteServiceTest {
         routeService = new RouteService(routeRepository, routePointRepository, scoringService, orsRoutingService);
         ReflectionTestUtils.setField(routeService, "orsApiKey", "");
         owner = new User("user@example.com", "hash", User.Role.USER);
+        owner.setId(1L);
     }
 
     // -----------------------------------------------------------------------
@@ -227,7 +228,7 @@ class RouteServiceTest {
         when(routeRepository.findById(1L)).thenReturn(Optional.of(route));
         when(routePointRepository.findByRouteIdOrderBySequenceNumber(1L)).thenReturn(List.of());
 
-        RouteResponse response = routeService.getRoute(1L);
+        RouteResponse response = routeService.getRoute(1L, owner);
 
         assertThat(response).isNotNull();
         assertThat(response.getId()).isEqualTo(1L);
@@ -238,16 +239,19 @@ class RouteServiceTest {
     void shouldThrowForNonExistentRoute() {
         when(routeRepository.findById(999L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> routeService.getRoute(999L))
+        assertThatThrownBy(() -> routeService.getRoute(999L, owner))
                 .isInstanceOf(com.pathiful.common.ResourceNotFoundException.class)
                 .hasMessageContaining("999");
     }
 
     @Test
     void shouldDeleteRouteSuccessfully() {
-        when(routeRepository.existsById(1L)).thenReturn(true);
+        Route route = new Route();
+        route.setId(1L);
+        route.setOwner(owner);
+        when(routeRepository.findById(1L)).thenReturn(Optional.of(route));
 
-        routeService.deleteRoute(1L);
+        routeService.deleteRoute(1L, owner);
 
         verify(routePointRepository).deleteByRouteId(1L);
         verify(routeRepository).deleteById(1L);
@@ -255,10 +259,85 @@ class RouteServiceTest {
 
     @Test
     void shouldThrowWhenDeletingNonExistentRoute() {
-        when(routeRepository.existsById(999L)).thenReturn(false);
+        when(routeRepository.findById(999L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> routeService.deleteRoute(999L))
+        assertThatThrownBy(() -> routeService.deleteRoute(999L, owner))
                 .isInstanceOf(com.pathiful.common.ResourceNotFoundException.class)
                 .hasMessageContaining("999");
+    }
+
+    // -----------------------------------------------------------------------
+    // Owner-Prüfung
+    // -----------------------------------------------------------------------
+
+    @Test
+    void shouldRejectGetRouteForNonOwner() {
+        Route route = new Route();
+        route.setId(1L);
+        route.setOwner(owner);
+
+        User otherUser = new User("other@example.com", "hash", User.Role.USER);
+        otherUser.setId(999L);
+
+        when(routeRepository.findById(1L)).thenReturn(Optional.of(route));
+
+        assertThatThrownBy(() -> routeService.getRoute(1L, otherUser))
+                .isInstanceOf(SecurityException.class)
+                .hasMessageContaining("Zugriff verweigert");
+    }
+
+    @Test
+    void shouldRejectDeleteRouteForNonOwner() {
+        Route route = new Route();
+        route.setId(1L);
+        route.setOwner(owner);
+
+        User otherUser = new User("other@example.com", "hash", User.Role.USER);
+        otherUser.setId(999L);
+
+        when(routeRepository.findById(1L)).thenReturn(Optional.of(route));
+
+        assertThatThrownBy(() -> routeService.deleteRoute(1L, otherUser))
+                .isInstanceOf(SecurityException.class)
+                .hasMessageContaining("Zugriff verweigert");
+    }
+
+    @Test
+    void shouldAllowAdminToGetAnyRoute() {
+        Route route = new Route();
+        route.setId(1L);
+        route.setOwner(owner);
+        route.setName("Admin-Test");
+        route.setRouteType(RouteType.ROUNDTRIP);
+        route.setTransportMode(RouteTransportMode.CAR);
+        route.setVisibility(Route.Visibility.PUBLIC);
+
+        User admin = new User("admin@example.com", "hash", User.Role.ADMIN);
+        admin.setId(42L);
+
+        when(routeRepository.findById(1L)).thenReturn(Optional.of(route));
+        when(routePointRepository.findByRouteIdOrderBySequenceNumber(1L)).thenReturn(List.of());
+
+        RouteResponse response = routeService.getRoute(1L, admin);
+
+        assertThat(response).isNotNull();
+        assertThat(response.getId()).isEqualTo(1L);
+    }
+
+    @Test
+    void shouldAllowAdminToDeleteAnyRoute() {
+        Route route = new Route();
+        route.setId(1L);
+        route.setOwner(owner);
+
+        User admin = new User("admin@example.com", "hash", User.Role.ADMIN);
+        admin.setId(42L);
+
+        when(routeRepository.findById(1L)).thenReturn(Optional.of(route));
+
+        routeService.deleteRoute(1L, admin);
+
+        verify(routePointRepository).deleteByRouteId(1L);
+        verify(routeRepository).deleteById(1L);
     }
 }

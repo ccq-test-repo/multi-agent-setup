@@ -181,13 +181,20 @@ public class RouteService {
     /**
      * Ruft eine gespeicherte Route ab.
      *
-     * @param id Routen-ID
+     * @param id   Routen-ID
+     * @param user der angemeldete Benutzer
      * @return RouteResponse
+     * @throws ResourceNotFoundException wenn die Route nicht existiert
+     * @throws SecurityException         wenn der Benutzer nicht der Owner ist
      */
     @Transactional(readOnly = true)
-    public RouteResponse getRoute(Long id) {
+    public RouteResponse getRoute(Long id, User user) {
         Route route = routeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Route", id));
+
+        if (!route.getOwner().getId().equals(user.getId()) && user.getRole() != User.Role.ADMIN) {
+            throw new SecurityException("Zugriff verweigert: Sie sind nicht der Besitzer dieser Route.");
+        }
 
         List<RoutePoint> points = routePointRepository.findByRouteIdOrderBySequenceNumber(id);
 
@@ -197,16 +204,23 @@ public class RouteService {
     /**
      * Löscht eine gespeicherte Route.
      *
-     * @param id Routen-ID
+     * @param id   Routen-ID
+     * @param user der angemeldete Benutzer
+     * @throws ResourceNotFoundException wenn die Route nicht existiert
+     * @throws SecurityException         wenn der Benutzer nicht der Owner ist
      */
     @Transactional
-    public void deleteRoute(Long id) {
-        if (!routeRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Route", id);
+    public void deleteRoute(Long id, User user) {
+        Route route = routeRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Route", id));
+
+        if (!route.getOwner().getId().equals(user.getId()) && user.getRole() != User.Role.ADMIN) {
+            throw new SecurityException("Zugriff verweigert: Sie sind nicht der Besitzer dieser Route.");
         }
+
         routePointRepository.deleteByRouteId(id);
         routeRepository.deleteById(id);
-        log.info("Route deleted: id={}", id);
+        log.info("Route deleted: id={}, by userId={}", id, user.getId());
     }
 
     // -----------------------------------------------------------------------

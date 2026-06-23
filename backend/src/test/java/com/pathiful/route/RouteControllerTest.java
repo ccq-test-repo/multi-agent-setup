@@ -1,19 +1,24 @@
 package com.pathiful.route;
 
 import com.pathiful.auth.TokenService;
+import com.pathiful.user.User;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -39,6 +44,24 @@ class RouteControllerTest {
     @MockBean
     private TokenService tokenService;
 
+    private User testUser;
+
+    @BeforeEach
+    void setUp() {
+        testUser = new User("user@example.com", "hash", User.Role.USER);
+        testUser.setId(1L);
+    }
+
+    /** Post-processor that sets the given User as the @AuthenticationPrincipal. */
+    private RequestPostProcessor withUser(User user) {
+        return request -> {
+            var auth = UsernamePasswordAuthenticationToken.authenticated(
+                    user, null, List.of(() -> "ROLE_USER"));
+            SecurityContextHolder.getContext().setAuthentication(auth);
+            return request;
+        };
+    }
+
     // -----------------------------------------------------------------------
     // POST /api/routes/roundtrip – Erfolgsfall
     // -----------------------------------------------------------------------
@@ -56,6 +79,7 @@ class RouteControllerTest {
         when(routeService.createRoundtrip(any(), any())).thenReturn(response);
 
         mockMvc.perform(post("/api/routes/roundtrip")
+                        .with(withUser(testUser))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -81,6 +105,7 @@ class RouteControllerTest {
     @Test
     void shouldRejectRoundtripWithMissingStartLat() throws Exception {
         mockMvc.perform(post("/api/routes/roundtrip")
+                        .with(withUser(testUser))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -95,6 +120,7 @@ class RouteControllerTest {
     @Test
     void shouldRejectRoundtripWithMissingStartLon() throws Exception {
         mockMvc.perform(post("/api/routes/roundtrip")
+                        .with(withUser(testUser))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -109,6 +135,7 @@ class RouteControllerTest {
     @Test
     void shouldRejectRoundtripWithInvalidLatitude() throws Exception {
         mockMvc.perform(post("/api/routes/roundtrip")
+                        .with(withUser(testUser))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -124,6 +151,7 @@ class RouteControllerTest {
     @Test
     void shouldRejectRoundtripWithInvalidLongitude() throws Exception {
         mockMvc.perform(post("/api/routes/roundtrip")
+                        .with(withUser(testUser))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -139,6 +167,7 @@ class RouteControllerTest {
     @Test
     void shouldRejectRoundtripWithEmptyTransportMode() throws Exception {
         mockMvc.perform(post("/api/routes/roundtrip")
+                        .with(withUser(testUser))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -154,6 +183,7 @@ class RouteControllerTest {
     @Test
     void shouldRejectRoundtripWithNullTransportMode() throws Exception {
         mockMvc.perform(post("/api/routes/roundtrip")
+                        .with(withUser(testUser))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -169,6 +199,7 @@ class RouteControllerTest {
     @Test
     void shouldRejectRoundtripWithNegativeDistance() throws Exception {
         mockMvc.perform(post("/api/routes/roundtrip")
+                        .with(withUser(testUser))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -198,6 +229,7 @@ class RouteControllerTest {
         when(routeService.createDestination(any(), any())).thenReturn(response);
 
         mockMvc.perform(post("/api/routes/destination")
+                        .with(withUser(testUser))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -227,6 +259,7 @@ class RouteControllerTest {
         when(routeService.createDestination(any(), any())).thenReturn(response);
 
         mockMvc.perform(post("/api/routes/destination")
+                        .with(withUser(testUser))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -245,6 +278,7 @@ class RouteControllerTest {
     @Test
     void shouldRejectDestinationWithMissingStartCoord() throws Exception {
         mockMvc.perform(post("/api/routes/destination")
+                        .with(withUser(testUser))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -277,9 +311,9 @@ class RouteControllerTest {
         pointDto.setLon(11.582);
         response.setPoints(List.of(pointDto));
 
-        when(routeService.getRoute(1L)).thenReturn(response);
+        when(routeService.getRoute(eq(1L), any(User.class))).thenReturn(response);
 
-        mockMvc.perform(get("/api/routes/1"))
+        mockMvc.perform(get("/api/routes/1").with(withUser(testUser)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.name").value("Gespeicherte Route"))
@@ -289,10 +323,10 @@ class RouteControllerTest {
 
     @Test
     void shouldReturn404ForNonExistentRoute() throws Exception {
-        when(routeService.getRoute(999L))
+        when(routeService.getRoute(eq(999L), any(User.class)))
                 .thenThrow(new com.pathiful.common.ResourceNotFoundException("Route", 999L));
 
-        mockMvc.perform(get("/api/routes/999"))
+        mockMvc.perform(get("/api/routes/999").with(withUser(testUser)))
                 .andExpect(status().isNotFound());
     }
 
@@ -302,16 +336,16 @@ class RouteControllerTest {
 
     @Test
     void shouldDeleteRoute() throws Exception {
-        mockMvc.perform(delete("/api/routes/1"))
+        mockMvc.perform(delete("/api/routes/1").with(withUser(testUser)))
                 .andExpect(status().isNoContent());
     }
 
     @Test
     void shouldReturn404ForDeletingNonExistentRoute() throws Exception {
         doThrow(new com.pathiful.common.ResourceNotFoundException("Route", 999L))
-                .when(routeService).deleteRoute(999L);
+                .when(routeService).deleteRoute(eq(999L), any(User.class));
 
-        mockMvc.perform(delete("/api/routes/999"))
+        mockMvc.perform(delete("/api/routes/999").with(withUser(testUser)))
                 .andExpect(status().isNotFound());
     }
 }

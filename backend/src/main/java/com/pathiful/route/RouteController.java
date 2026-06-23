@@ -50,10 +50,13 @@ public class RouteController {
      * GET /api/routes/{id}
      *
      * Ruft eine gespeicherte Route mit allen Wegpunkten ab.
+     * Nur der Besitzer (OWNER) oder Admin darf die Route abrufen.
      */
     @GetMapping("/{id}")
-    public ResponseEntity<RouteResponse> getRoute(@PathVariable Long id) {
-        RouteResponse response = routeService.getRoute(id);
+    public ResponseEntity<RouteResponse> getRoute(
+            @PathVariable Long id,
+            @AuthenticationPrincipal User user) {
+        RouteResponse response = routeService.getRoute(id, user);
         return ResponseEntity.ok(response);
     }
 
@@ -61,10 +64,13 @@ public class RouteController {
      * DELETE /api/routes/{id}
      *
      * Löscht eine gespeicherte Route und ihre Wegpunkte.
+     * Nur der Besitzer (OWNER) oder Admin darf die Route löschen.
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteRoute(@PathVariable Long id) {
-        routeService.deleteRoute(id);
+    public ResponseEntity<Void> deleteRoute(
+            @PathVariable Long id,
+            @AuthenticationPrincipal User user) {
+        routeService.deleteRoute(id, user);
         return ResponseEntity.noContent().build();
     }
 }
