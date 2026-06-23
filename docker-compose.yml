@@ -1,0 +1,38 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    container_name: pathiful-db
+    environment:
+      POSTGRES_DB: ${DB_NAME:-pathiful}
+      POSTGRES_USER: ${DB_USER:-pathiful}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-pathiful}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-pathiful} -d ${DB_NAME:-pathiful}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    container_name: pathiful-backend
+    environment:
+      SERVER_PORT: 8080
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-pathiful}
+      DB_USER: ${DB_USER:-pathiful}
+      DB_PASSWORD: ${DB_PASSWORD:-pathiful}
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:
