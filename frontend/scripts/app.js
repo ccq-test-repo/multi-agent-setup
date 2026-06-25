@@ -803,6 +803,20 @@ function init() {
   // Karte initialisieren
   initMap();
 
+  // Offline/Online-Event-Listener
+  window.addEventListener("offline", function() {
+    if (DOM.offlineIndicator) DOM.offlineIndicator.classList.add("visible");
+    console.warn("App is offline");
+  });
+  window.addEventListener("online", function() {
+    if (DOM.offlineIndicator) DOM.offlineIndicator.classList.remove("visible");
+    console.log("App is online");
+  });
+  // Initialen Status pruefen
+  if (!navigator.onLine && DOM.offlineIndicator) {
+    DOM.offlineIndicator.classList.add("visible");
+  }
+
   // Auth laden
   loadAuth();
 
