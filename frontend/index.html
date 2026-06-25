@@ -11,6 +11,9 @@
   <title>Pathiful</title>
 </head>
 <body>
+  <!-- Offline indicator -->
+  <div class="offline-indicator" id="offlineIndicator">📡 Keine Internetverbindung</div>
+
   <div class="app-layout">
 
     <!-- ===== Sidebar ===== -->
@@ -268,5 +271,16 @@
 
   <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
   <script src="/scripts/app.js"></script>
+  <!-- Service Worker registrieren -->
+  <script>
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("/service-worker.js").then(
+        (reg) => console.log("SW registered:", reg.scope),
+        (err) => console.warn("SW registration failed:", err)
+      );
+    });
+  }
+  </script>
 </body>
 </html>
