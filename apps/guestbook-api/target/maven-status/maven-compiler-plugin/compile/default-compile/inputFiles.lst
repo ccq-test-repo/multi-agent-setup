@@ -1,0 +1,7 @@
+/tmp/multi-agent-setup/apps/guestbook-api/src/main/java/com/pathiful/guestbook/controller/GuestbookController.java
+/tmp/multi-agent-setup/apps/guestbook-api/src/main/java/com/pathiful/guestbook/GuestbookApplication.java
+/tmp/multi-agent-setup/apps/guestbook-api/src/main/java/com/pathiful/guestbook/repository/InMemoryGuestbookRepository.java
+/tmp/multi-agent-setup/apps/guestbook-api/src/main/java/com/pathiful/guestbook/model/ErrorResponse.java
+/tmp/multi-agent-setup/apps/guestbook-api/src/main/java/com/pathiful/guestbook/CorsConfig.java
+/tmp/multi-agent-setup/apps/guestbook-api/src/main/java/com/pathiful/guestbook/model/CreateMessageRequest.java
+/tmp/multi-agent-setup/apps/guestbook-api/src/main/java/com/pathiful/guestbook/model/GuestbookEntry.java

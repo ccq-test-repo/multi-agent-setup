@@ -1,0 +1,8 @@
+com/pathiful/guestbook/GuestbookApplication.class
+com/pathiful/guestbook/repository/InMemoryGuestbookRepository.class
+com/pathiful/guestbook/model/CreateMessageRequest.class
+com/pathiful/guestbook/model/GuestbookEntry.class
+com/pathiful/guestbook/model/ErrorResponse.class
+com/pathiful/guestbook/CorsConfig.class
+com/pathiful/guestbook/controller/GuestbookController.class
+com/pathiful/guestbook/CorsConfig$1.class
