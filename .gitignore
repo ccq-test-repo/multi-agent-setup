@@ -26,6 +26,9 @@ replay_pid*
 # Maven build output
 backend/target/
 backend/*.jar
+
+# To-do service build output
+apps/todo-service/target/
 backend/*.war
 
 # Maven wrapper jar (regenerate with mvn wrapper:wrapper)
