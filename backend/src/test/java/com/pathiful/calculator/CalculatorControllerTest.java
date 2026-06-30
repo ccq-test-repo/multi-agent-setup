@@ -50,7 +50,7 @@ class CalculatorControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"expression\":\"5/0\"}"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").value("Division by zero"));
+                .andExpect(jsonPath("$.message").value("Division by zero"));
     }
 
     @Test
@@ -62,7 +62,7 @@ class CalculatorControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"expression\":\"2+abc\"}"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").value("Invalid expression"));
+                .andExpect(jsonPath("$.message").value("Invalid expression"));
     }
 
     @Test
