@@ -42,3 +42,4 @@ backend/.mvn/wrapper/maven-wrapper.jar
 # OS
 .DS_Store
 Thumbs.db
+apps/todo-service/target/
