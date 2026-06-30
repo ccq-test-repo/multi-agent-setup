@@ -45,3 +45,6 @@ backend/.mvn/wrapper/maven-wrapper.jar
 # OS
 .DS_Store
 Thumbs.db
+
+# Calculator app build output
+apps/calculator/target/
