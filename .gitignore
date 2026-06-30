@@ -48,3 +48,6 @@ Thumbs.db
 
 # Calculator app build output
 apps/calculator/target/
+
+# Guestbook build output
+apps/guestbook-api/target/
