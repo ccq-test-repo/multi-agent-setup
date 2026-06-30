@@ -1,0 +1,8 @@
+/tmp/multi-agent-setup/apps/todo-service/src/main/java/com/pathiful/todo/TodoApplication.java
+/tmp/multi-agent-setup/apps/todo-service/src/main/java/com/pathiful/todo/model/ErrorResponse.java
+/tmp/multi-agent-setup/apps/todo-service/src/main/java/com/pathiful/todo/repository/InMemoryTodoRepository.java
+/tmp/multi-agent-setup/apps/todo-service/src/main/java/com/pathiful/todo/repository/TodoRepository.java
+/tmp/multi-agent-setup/apps/todo-service/src/main/java/com/pathiful/todo/service/TodoService.java
+/tmp/multi-agent-setup/apps/todo-service/src/main/java/com/pathiful/todo/controller/TodoController.java
+/tmp/multi-agent-setup/apps/todo-service/src/main/java/com/pathiful/todo/model/Todo.java
+/tmp/multi-agent-setup/apps/todo-service/src/main/java/com/pathiful/todo/model/CreateTodoRequest.java
