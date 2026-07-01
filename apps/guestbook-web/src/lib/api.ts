@@ -1,15 +1,14 @@
 const API_BASE = import.meta.env.VITE_API_BASE ?? "http://localhost:8088";
 
 export interface GuestbookEntry {
-  id: string;
+  id: number;
   author: string;
-  message: string;
-  createdAt: string;
+  text: string;
 }
 
 export interface CreateMessagePayload {
   author: string;
-  message: string;
+  text: string;
 }
 
 export interface ApiErrorResponse {

@@ -51,7 +51,7 @@ export function Guestbook() {
     setSubmitError("");
 
     try {
-      const newEntry = await createMessage({ author: author.trim(), message: message.trim() });
+      const newEntry = await createMessage({ author: author.trim(), text: message.trim() });
       setEntries((prev) => [newEntry, ...prev]);
       setAuthor("");
       setMessage("");
@@ -188,16 +188,7 @@ export function Guestbook() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-sm whitespace-pre-wrap">{entry.message}</p>
-                    <p className="mt-2 text-xs text-muted-foreground">
-                      {new Date(entry.createdAt).toLocaleDateString("de-DE", {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </p>
+                    <p className="text-sm whitespace-pre-wrap">{entry.text}</p>
                   </CardContent>
                 </Card>
               </li>
