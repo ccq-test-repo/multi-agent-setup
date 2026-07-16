@@ -1,4 +1,4 @@
-package com.pathiful.calc_subtract;
+package com.pathiful.calculator.model;
 
 /**
  * Response-DTO for POST /api/calc/subtract.

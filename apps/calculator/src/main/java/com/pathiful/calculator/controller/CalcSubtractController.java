@@ -1,5 +1,8 @@
-package com.pathiful.calc_subtract;
+package com.pathiful.calculator.controller;
 
+import com.pathiful.calculator.model.CalcSubtractRequest;
+import com.pathiful.calculator.model.CalcSubtractResponse;
+import com.pathiful.calculator.model.ErrorResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -8,8 +11,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.Map;
 
 /**
  * REST controller for the simple subtraction endpoint.
@@ -36,7 +37,7 @@ public class CalcSubtractController {
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Map<String, String>> handleValidation(MethodArgumentNotValidException ex) {
-        return ResponseEntity.badRequest().body(Map.of("error", "invalid_input"));
+    public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException ex) {
+        return ResponseEntity.badRequest().body(new ErrorResponse("invalid_input"));
     }
 }
