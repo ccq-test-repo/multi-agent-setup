@@ -15,9 +15,6 @@ export function setup() {
 
   // Patch react module's exports to include act
   // This runs BEFORE any test files or their imports
-  const reactModulePath = req.resolve("react", {
-    paths: [process.cwd()],
-  });
 
   // Use dynamic import to get the ESM act export
   // and assign it to the CJS exports
