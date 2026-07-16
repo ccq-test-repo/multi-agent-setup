@@ -1,4 +1,4 @@
-package com.pathiful.calc_add;
+package com.pathiful.calculator.model;
 
 /**
  * Response-DTO for POST /api/calc/add.

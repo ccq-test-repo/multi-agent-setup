@@ -1,4 +1,4 @@
-package com.pathiful.calc_add;
+package com.pathiful.calculator.model;
 
 import jakarta.validation.constraints.NotNull;
 
