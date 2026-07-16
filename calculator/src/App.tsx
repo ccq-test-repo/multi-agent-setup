@@ -1,6 +1,10 @@
 import { Calculator } from "@/components/calculator";
+import { HistoryPanel } from "@/components/history-panel";
+import { useHistory } from "@/hooks/useHistory";
 
 export default function App() {
+  const { entries, addEntry, clearHistory } = useHistory();
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4">
       <header className="mb-6 text-center">
@@ -11,8 +15,10 @@ export default function App() {
           Einfache Rechenoperationen
         </p>
       </header>
-      <main>
-        <Calculator />
+      <main className="flex flex-col lg:flex-row items-start gap-6 lg:gap-8">
+        <Calculator onCalculate={addEntry} />
+        <div className="w-px hidden lg:block bg-border self-stretch" aria-hidden="true" />
+        <HistoryPanel entries={entries} onClear={clearHistory} />
       </main>
       <footer className="mt-8 text-xs text-muted-foreground">
         Unterstützt: +, -, ×, ÷

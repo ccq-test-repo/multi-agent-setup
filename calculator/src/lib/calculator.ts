@@ -73,3 +73,16 @@ export function formatNumber(n: number): string {
   if (Number.isInteger(n)) return n.toString();
   return parseFloat(n.toFixed(10)).toString();
 }
+
+/**
+ * Extracts the operands and operator from a simple two-operand expression.
+ * Returns null if the expression doesn't match the expected pattern.
+ * Example: "3 + 5" → { a: "3", op: "+", b: "5" }
+ */
+export function parseBinaryExpression(expression: string): { a: string; op: CalcOp; b: string } | null {
+  const trimmed = expression.trim();
+  // Match: number, space, operator, space, number
+  const match = trimmed.match(/^(-?[\d,.]+)\s*([+\-×÷])\s*(-?[\d,.]+)$/);
+  if (!match) return null;
+  return { a: match[1], op: match[2] as CalcOp, b: match[3] };
+}

@@ -2,7 +2,8 @@ import { useState, useCallback, useRef } from "react";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { calculateExpression } from "@/lib/api";
-import { isOperator } from "@/lib/calculator";
+import { isOperator, parseBinaryExpression, formatNumber } from "@/lib/calculator";
+import type { HistoryEntry } from "@/hooks/useHistory";
 
 type CalculatorState = "idle" | "loading" | "error" | "result";
 
@@ -31,7 +32,11 @@ const buttons: {
   { label: "=", action: "=", variant: "outline" },
 ];
 
-export function Calculator() {
+interface CalculatorProps {
+  onCalculate?: (entry: HistoryEntry) => void;
+}
+
+export function Calculator({ onCalculate }: CalculatorProps) {
   const [display, setDisplay] = useState("0");
   const [state, setState] = useState<CalculatorState>("idle");
   const [expression, setExpression] = useState("");
@@ -65,9 +70,19 @@ export function Calculator() {
 
       const result = await calculateExpression(apiExpression, controller.signal);
 
-      const resultStr = Number.isInteger(result)
-        ? result.toString()
-        : parseFloat(result.toFixed(10)).toString();
+      const resultStr = formatNumber(result);
+
+      // Create history entry from the display expression (with ×, ÷ operators)
+      const parsed = parseBinaryExpression(expression);
+      if (parsed) {
+        const entry: HistoryEntry = {
+          operandA: parsed.a,
+          operator: parsed.op,
+          operandB: parsed.b,
+          result: resultStr,
+        };
+        onCalculate?.(entry);
+      }
 
       setDisplay(resultStr);
       setExpression(resultStr);
