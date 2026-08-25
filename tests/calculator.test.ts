@@ -242,3 +242,41 @@ describe('calculate() + formatNumber() – Display-Integration', () => {
     assert.strictEqual(formatNumber(result), '-7');
   });
 });
+
+// ---------------------------------------------------------------------------
+// Akzeptanzkriterium 6: Ungültige Eingaben führen nicht zu einem Absturz
+// ---------------------------------------------------------------------------
+// Diese Edge-Case-Tests sichern die Crash-Prävention der puren Rechenlogik ab.
+// Die UI (handleButton in calculator.tsx) verhindert die meisten dieser Ausdrücke
+// bereits, aber die Logik darf auch bei direktem, ungefiltertem Aufruf nicht crashen.
+
+describe('calculate() – Crash-Prävention (ungültige Eingaben)', () => {
+  it('should throw Division durch Null auch innerhalb einer Kette', () => {
+    assert.throws(() => calculate('5\u00F70+1'), /Division durch Null/);
+  });
+
+  it('should throw Division durch Null auch für 0 ÷ 0', () => {
+    assert.throws(() => calculate('0\u00F70'), /Division durch Null/);
+  });
+
+  it('should not crash on a leading operator (returns non-number, no throw)', () => {
+    // Ein führender Operator ("÷5") erzeugt keinen gültigen Ausdruck;
+    // die Logik wirft nicht, sondern liefert ein nicht-numerisches Ergebnis.
+    assert.doesNotThrow(() => calculate('\u00F75'));
+  });
+
+  it('should not crash on a lone operator (returns non-number, no throw)', () => {
+    assert.doesNotThrow(() => calculate('+'));
+    assert.doesNotThrow(() => calculate('-'));
+  });
+
+  it('should not crash on a trailing operator after a number', () => {
+    // "5+" wirft einen lesbaren Fehler statt abzustürzen.
+    assert.throws(() => calculate('5+'), /Ungültige Eingabe/);
+  });
+
+  it('should not crash on malformed decimal input (collapses via parseFloat)', () => {
+    // "1.2.3" kollabiert via parseFloat zu 1.2 – kein Absturz.
+    assert.strictEqual(calculate('1.2.3+4'), 5.2);
+  });
+});
