@@ -1,13 +1,15 @@
 /**
- * Tests für die Calculator-UI-Logik (Issue #23).
+ * Tests für die Calculator-UI-Logik (Issue #53).
  *
- * Testet die Logik, die in calculator.tsx verwendet wird:
- *   - Symbol-Mapping (× → *, ÷ → /) für API-Kompatibilität
- *   - Display-Formatierung (Integer vs. Decimal)
- *   - Button-Action-Routing (clear, backspace, =, operators, digits)
- *   - State-Übergänge (idle → loading → result/error)
- *   - Abort-Controller-Handling
- *   - Fehlerbehandlung bei AbortError
+ * Der Taschenrechner berechnet seit Issue #53 vollständig lokal und synchron
+ * über die pure Rechenlogik aus src/lib/calculator.ts (kein Backend-Call mehr).
+ * Diese Tests prüfen das Verhalten, das in calculator.tsx verdrahtet ist:
+ *   - Berechnung über calculate() + formatNumber() (lokal, synchron)
+ *   - Division durch 0 wird als sauberer Fehler behandelt (kein Absturz)
+ *   - ungültige Eingaben werfen einen Fehler statt abzustürzen
+ *   - Button-Action-Routing (clear, backspace, =, Operatoren, Ziffern, Komma)
+ *   - State-Übergänge (idle → result/error)
+ *   - Button-Grid-Layout
  *
  * Verwendet den integrierten Node.js Test Runner (node:test).
  * Aufruf: npx tsx --test tests/calculator-ui.test.ts
@@ -15,168 +17,184 @@
 
 import assert from 'node:assert';
 import { describe, it } from 'node:test';
+import {
+  calculate,
+  formatNumber,
+  parseBinaryExpression,
+  isOperator,
+} from '../calculator/src/lib/calculator';
 
-// ---------------------------------------------------------------------------
-// Expression Mapping (wie in calculator.tsx)
-// ---------------------------------------------------------------------------
-
-/**
- * Konvertiert UI-Operatoren (×, ÷) zu API-kompatiblen Operatoren (*, /).
- */
-function mapExpressionForApi(expression: string): string {
-  return expression.replace(/×/g, '*').replace(/÷/g, '/');
-}
+type CalculatorState = 'idle' | 'error' | 'result';
 
 /**
- * Formatiert ein numerisches Ergebnis für die Anzeige.
+ * Modelliert die handleEqual-Berechnung, wie sie in calculator.tsx verdrahtet ist:
+ *   - calculate(expression) → Ergebnis (wirft bei Division durch 0 / ungültiger Eingabe)
+ *   - formatNumber(result) → Anzeige
+ *   - Fehler → display "Fehler", state "error"
  */
-function formatDisplayResult(result: number): string {
-  return Number.isInteger(result)
-    ? result.toString()
-    : parseFloat(result.toFixed(10)).toString();
+function computeEqual(
+  expression: string
+): { display: string; state: CalculatorState; error?: string } {
+  if (!expression.trim()) {
+    return { display: '0', state: 'idle' };
+  }
+  try {
+    const result = calculate(expression);
+    const resultStr = formatNumber(result);
+    return { display: resultStr, state: 'result' };
+  } catch (err) {
+    const msg =
+      err instanceof Error ? err.message : 'Ein Fehler ist aufgetreten';
+    return { display: 'Fehler', state: 'error', error: msg };
+  }
 }
 
 // ---------------------------------------------------------------------------
-// Symbol-Mapping
+// Lokale, synchrone Berechnung (Kernverhalten seit Issue #53)
 // ---------------------------------------------------------------------------
 
-describe('Expression Mapping (UI → API)', () => {
-  it('should replace × with *', () => {
-    assert.strictEqual(mapExpressionForApi('3×4'), '3*4');
-    assert.strictEqual(mapExpressionForApi('2 × 3'), '2 * 3');
+describe('Lokale Berechnung (handleEqual)', () => {
+  it('should compute + locally and synchronously', () => {
+    assert.deepStrictEqual(computeEqual('3 + 4'), { display: '7', state: 'result' });
   });
 
-  it('should replace ÷ with /', () => {
-    assert.strictEqual(mapExpressionForApi('10÷2'), '10/2');
-    assert.strictEqual(mapExpressionForApi('10 ÷ 2'), '10 / 2');
+  it('should compute - locally', () => {
+    assert.deepStrictEqual(computeEqual('10 - 4'), { display: '6', state: 'result' });
   });
 
-  it('should handle mixed operators', () => {
-    assert.strictEqual(mapExpressionForApi('2+3×4-6÷2'), '2+3*4-6/2');
+  it('should compute × locally', () => {
+    assert.deepStrictEqual(computeEqual('6 × 7'), { display: '42', state: 'result' });
   });
 
-  it('should keep non-operator characters unchanged', () => {
-    assert.strictEqual(mapExpressionForApi('10+20-5'), '10+20-5');
-    assert.strictEqual(mapExpressionForApi('3.5+2.5'), '3.5+2.5');
+  it('should compute ÷ locally', () => {
+    assert.deepStrictEqual(computeEqual('20 ÷ 4'), { display: '5', state: 'result' });
   });
 
-  it('should handle empty string', () => {
-    assert.strictEqual(mapExpressionForApi(''), '');
+  it('should handle decimal results (floating point precision)', () => {
+    assert.deepStrictEqual(computeEqual('0.1 + 0.2'), { display: '0.3', state: 'result' });
   });
 
-  it('should handle expressions with no special operators', () => {
-    assert.strictEqual(mapExpressionForApi('42'), '42');
-    assert.strictEqual(mapExpressionForApi('0'), '0');
+  it('should do nothing on empty expression', () => {
+    assert.deepStrictEqual(computeEqual('   '), { display: '0', state: 'idle' });
   });
 });
 
 // ---------------------------------------------------------------------------
-// Tests: Display Formatting (wie in calculator.tsx handleEqual)
+// Division durch 0 (Akzeptanzkriterium)
 // ---------------------------------------------------------------------------
 
-describe('Display Result Formatting', () => {
-  it('should format integer results without decimal places', () => {
-    assert.strictEqual(formatDisplayResult(5), '5');
-    assert.strictEqual(formatDisplayResult(0), '0');
-    assert.strictEqual(formatDisplayResult(-3), '-3');
-    assert.strictEqual(formatDisplayResult(100), '100');
+describe('Division durch 0', () => {
+  it('should throw a clean error instead of crashing', () => {
+    assert.throws(() => calculate('10 ÷ 0'), /Division durch Null/);
   });
 
-  it('should format decimal results with floating point', () => {
-    assert.strictEqual(formatDisplayResult(3.5), '3.5');
-    assert.strictEqual(formatDisplayResult(0.1), '0.1');
-    assert.strictEqual(formatDisplayResult(-0.5), '-0.5');
+  it('should surface a readable error in the UI state', () => {
+    const res = computeEqual('10 ÷ 0');
+    assert.strictEqual(res.state, 'error');
+    assert.strictEqual(res.display, 'Fehler');
+    assert.match(res.error ?? '', /Division durch Null/i);
   });
 
-  it('should handle floating point precision issues', () => {
-    // 0.1 + 0.2 = 0.30000000000000004 → should be formatted clean
-    assert.strictEqual(formatDisplayResult(0.1 + 0.2), '0.3');
-  });
-
-  it('should format large integers correctly', () => {
-    assert.strictEqual(formatDisplayResult(1000000), '1000000');
-    assert.strictEqual(formatDisplayResult(999999999), '999999999');
-  });
-
-  it('should handle negative decimals', () => {
-    assert.strictEqual(formatDisplayResult(-7.5), '-7.5');
+  it('should also guard 0 ÷ 0', () => {
+    const res = computeEqual('0 ÷ 0');
+    assert.strictEqual(res.state, 'error');
+    assert.match(res.error ?? '', /Division durch Null/i);
   });
 });
 
 // ---------------------------------------------------------------------------
-// Tests: Button action routing logic (wie in handleButton)
+// Ungültige Eingaben (Akzeptanzkriterium: kein Absturz)
+// ---------------------------------------------------------------------------
+
+describe('Ungültige Eingaben', () => {
+  it('should throw for an invalid second operand', () => {
+    assert.throws(() => calculate('5 + abc'));
+  });
+
+  it('should surface a readable error instead of crashing the UI', () => {
+    const res = computeEqual('5 + nichtzahl');
+    assert.strictEqual(res.state, 'error');
+    assert.strictEqual(res.display, 'Fehler');
+    assert.ok(res.error);
+  });
+
+  // Eine einzelne, rein nicht-numerische Eingabe ergibt NaN statt zu crashen
+  // (der UI-Verlauf erzeugt über die Buttons solche Zeichen jedoch nie).
+  it('should not crash on a lone non-numeric token (returns NaN)', () => {
+    assert.ok(Number.isNaN(calculate('abc')));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// formatNumber – Anzeigeformatierung
+// ---------------------------------------------------------------------------
+
+describe('formatNumber() Display-Formatierung', () => {
+  it('should format integers without trailing decimals', () => {
+    assert.strictEqual(formatNumber(5), '5');
+    assert.strictEqual(formatNumber(-3), '-3');
+    assert.strictEqual(formatNumber(1000000), '1000000');
+  });
+
+  it('should format clean decimals', () => {
+    assert.strictEqual(formatNumber(3.5), '3.5');
+    assert.strictEqual(formatNumber(-0.5), '-0.5');
+  });
+
+  it('should round floating point artifacts', () => {
+    assert.strictEqual(formatNumber(0.1 + 0.2), '0.3');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// parseBinaryExpression – Verlaufseintrag
+// ---------------------------------------------------------------------------
+
+describe('parseBinaryExpression()', () => {
+  it('should parse a two-operand expression', () => {
+    assert.deepStrictEqual(parseBinaryExpression('3 + 5'), { a: '3', op: '+', b: '5' });
+  });
+
+  it('should handle all four operators', () => {
+    assert.deepStrictEqual(parseBinaryExpression('10 - 4'), { a: '10', op: '-', b: '4' });
+    assert.deepStrictEqual(parseBinaryExpression('6 × 7'), { a: '6', op: '×', b: '7' });
+    assert.deepStrictEqual(parseBinaryExpression('20 ÷ 4'), { a: '20', op: '÷', b: '4' });
+  });
+
+  it('should return null for non-binary expressions', () => {
+    assert.strictEqual(parseBinaryExpression('3 + 4 + 5'), null);
+    assert.strictEqual(parseBinaryExpression('abc'), null);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Button-Action-Routing (wie in handleButton)
 // ---------------------------------------------------------------------------
 
 describe('Button Action Routing', () => {
-  /**
-   * Simuliert die handleButton-Entscheidungslogik aus calculator.tsx.
-   * Testet, ob Aktionen korrekt weitergeleitet werden basierend auf
-   * current state und expression.
-   */
-
-  type CalculatorState = 'idle' | 'loading' | 'error' | 'result';
-
-  interface CalcModel {
-    display: string;
-    state: CalculatorState;
-    expression: string;
-    errorMessage: string;
-  }
-
-  // Testet die Entscheidungslogik für clear
+  // clear resetet in jedem State
   it('should reset everything on clear action regardless of state', () => {
-    const states: CalculatorState[] = ['idle', 'loading', 'error', 'result'];
+    const states: CalculatorState[] = ['idle', 'error', 'result'];
     for (const s of states) {
-      const model: CalcModel = {
-        display: '42',
-        state: s,
-        expression: '42',
-        errorMessage: s === 'error' ? 'Fehler' : '',
-      };
-      // clear resets to initial
+      const model = { display: '42', state: s, expression: '42' };
       model.display = '0';
       model.expression = '';
       model.state = 'idle';
-      model.errorMessage = '';
       assert.strictEqual(model.display, '0');
       assert.strictEqual(model.expression, '');
       assert.strictEqual(model.state, 'idle');
-      assert.strictEqual(model.errorMessage, '');
     }
   });
 
-  // Testet: Im loading state sind alle Buttons außer clear disabled
-  it('should disable all buttons except clear when loading', () => {
-    // Der Button-Code: btn.disabled = state === "loading" && btn.action !== "clear"
-    const loadingState: CalculatorState = 'loading';
-    const isDisabled = (action: string) => loadingState === 'loading' && action !== 'clear';
-    assert.strictEqual(isDisabled('clear'), false);  // clear bleibt enabled
-    assert.strictEqual(isDisabled('='), true);        // = disabled
-    assert.strictEqual(isDisabled('+'), true);        // Operator disabled
-    assert.strictEqual(isDisabled('1'), true);        // Digit disabled
-    assert.strictEqual(isDisabled('backspace'), true); // Backspace disabled
-  });
-
-  // Testet: Im idle/result state sind Buttons enabled
-  it('should enable buttons when not loading', () => {
-    const idleState: CalculatorState = 'idle';
-    const isDisabled = (action: string) => idleState === 'loading' && action !== 'clear';
-    assert.strictEqual(isDisabled('='), false);
-    assert.strictEqual(isDisabled('+'), false);
-    assert.strictEqual(isDisabled('1'), false);
-    assert.strictEqual(isDisabled('backspace'), false);
-  });
-
-  // Testet: = Aktion in error state wird ignoriert
+  // = in error state wird ignoriert
   it('should ignore equals press in error state', () => {
     const state: CalculatorState = 'error';
     const action = '=';
-    // In calculator.tsx: if (state === "error") { if (action === "=") return; }
     const shouldIgnore = state === 'error' && action === '=';
     assert.strictEqual(shouldIgnore, true);
   });
 
-  // Testet: Nach error state führt eine Eingabe (außer =) zum reset
+  // Nach error state führt eine Eingabe (außer =) zum Reset
   it('should reset after error state on non-equals input', () => {
     const state: CalculatorState = 'error';
     const action = '1';
@@ -184,81 +202,61 @@ describe('Button Action Routing', () => {
     assert.strictEqual(shouldReset, true);
   });
 
-  // Testet: Operator nach Operator wird blockiert (z. B. ++, +×)
+  // Operator nach Operator wird blockiert (z. B. ++, +×)
   it('should prevent consecutive operators', () => {
-    const isOperator = (token: string) => ['+', '-', '×', '÷'].includes(token);
     const expression = '2 +';
     const lastChar = expression.trim().slice(-1);
     const wouldBlock = isOperator(lastChar);
     assert.strictEqual(wouldBlock, true);
   });
 
-  // Testet: Negative number start (z. B. -5+3)
+  // Minus als erstes Zeichen (negative Zahl)
   it('should allow minus as first character', () => {
     const expression = '';
     const action = '-';
-    const isOperator = (token: string) => ['+', '-', '×', '÷'].includes(token);
-    const allowsMinus =
-      expression === '' && isOperator(action) && action === '-';
+    const allowsMinus = expression === '' && isOperator(action) && action === '-';
     assert.strictEqual(allowsMinus, true);
   });
 
-  // Testet: Dezimalpunkt in einer Zahl nur einmal erlaubt
+  // Dezimalpunkt nur einmal pro Zahl
   it('should prevent multiple decimal points in the same number', () => {
     const expression = '2.5 + 3';
-    // Parse expression in letztes Teil (nach letztem Operator)
     const parts = expression.split(/[\+\-\×\÷]/);
     const lastPart = parts[parts.length - 1].trim();
-    const hasDecimal = lastPart.includes('.');
-    assert.strictEqual(hasDecimal, false); // "3" hat keinen Dezimalpunkt
+    assert.strictEqual(lastPart.includes('.'), false);
 
     const expression2 = '2.5 + 3.';
     const parts2 = expression2.split(/[\+\-\×\÷]/);
     const lastPart2 = parts2[parts2.length - 1].trim();
-    const hasDecimal2 = lastPart2.includes('.');
-    assert.strictEqual(hasDecimal2, true); // "3." hat schon einen Punkt
+    assert.strictEqual(lastPart2.includes('.'), true);
   });
 
-  // Testet: Backspace in error/result state resetet
+  // Backspace in error/result state resetet
   it('should reset on backspace in error or result state', () => {
     const resetStates: CalculatorState[] = ['error', 'result'];
     for (const s of resetStates) {
-      const state: CalculatorState = s;
+      const state = s;
       const action = 'backspace';
       const shouldReset = (state === 'error' || state === 'result') && action === 'backspace';
       assert.strictEqual(shouldReset, true, `should reset on backspace in ${s} state`);
     }
   });
 
-  // Testet: Backspace löscht das letzte Zeichen
+  // Backspace löscht das letzte Zeichen
   it('should remove last character on backspace in idle state', () => {
     const expression = '123';
-    const newExpr = expression.slice(0, -1);
-    assert.strictEqual(newExpr, '12');
-
-    // Bei length = 1: reset
+    assert.strictEqual(expression.slice(0, -1), '12');
     const expression2 = '1';
-    const newExpr2 = expression2.slice(0, -1);
-    assert.strictEqual(newExpr2, '');
+    assert.strictEqual(expression2.slice(0, -1), '');
   });
 });
 
 // ---------------------------------------------------------------------------
-// Tests: Display state rendering
+// Display-State-Rendering
 // ---------------------------------------------------------------------------
 
 describe('Display State Rendering', () => {
-  it('should show Spinner Icon when loading', () => {
-    // In calculator.tsx: {state === "loading" && <Loader2 className="animate-spin" />}
-    const showSpinner = (state: string) => state === 'loading';
-    assert.strictEqual(showSpinner('loading'), true);
-    assert.strictEqual(showSpinner('idle'), false);
-    assert.strictEqual(showSpinner('error'), false);
-    assert.strictEqual(showSpinner('result'), false);
-  });
-
-  it('should show error message with red text when in error state', () => {
-    // display hat Klasse "text-destructive" bei state === "error"
+  it('should show error display with red text when in error state', () => {
     const isErrorDisplay = (state: string) => state === 'error';
     assert.strictEqual(isErrorDisplay('error'), true);
     assert.strictEqual(isErrorDisplay('idle'), false);
@@ -273,73 +271,14 @@ describe('Display State Rendering', () => {
     assert.strictEqual(showEmptyHint('result', ''), false);
     assert.strictEqual(showEmptyHint('error', ''), false);
   });
-
-  it('should show loading bar animation when loading', () => {
-    const showLoadingBar = (state: string) => state === 'loading';
-    assert.strictEqual(showLoadingBar('loading'), true);
-    assert.strictEqual(showLoadingBar('idle'), false);
-    assert.strictEqual(showLoadingBar('result'), false);
-  });
 });
 
 // ---------------------------------------------------------------------------
-// Tests: Error handling flow
-// ---------------------------------------------------------------------------
-
-describe('Error Handling in Component Flow', () => {
-  it('should ignore AbortError and not update display', () => {
-    // In calculator.tsx: catch block prüft auf AbortError
-    const err = new DOMException('The operation was aborted', 'AbortError');
-    const isAbortError = err instanceof DOMException && err.name === 'AbortError';
-    assert.strictEqual(isAbortError, true);
-
-    // Bei AbortError: return (keine State-Änderung)
-    const displayBefore = '5';
-    const displayAfter = '5'; // unchanged
-    assert.strictEqual(displayAfter, displayBefore);
-  });
-
-  it('should set error state and show message on non-abort errors', () => {
-    const err = new Error('Division durch Null nicht erlaubt');
-    const isAbortError = err instanceof DOMException && err.name === 'AbortError';
-    assert.strictEqual(isAbortError, false);
-
-    // Nicht-AbortError → display = "Fehler", state = "error"
-    const display = 'Fehler';
-    const errorMessage = err.message;
-    assert.strictEqual(display, 'Fehler');
-    assert.strictEqual(errorMessage, 'Division durch Null nicht erlaubt');
-  });
-
-  it('should fallback to generic message on unknown error type', () => {
-    const err = 'string error';
-    const msg = err instanceof Error ? err.message : 'Ein Fehler ist aufgetreten';
-    assert.strictEqual(msg, 'Ein Fehler ist aufgetreten');
-  });
-
-  it('should cancel previous request on new equals press', () => {
-    // Ref zu altem AbortController wird aborted
-    let aborted = false;
-    const oldController = new AbortController();
-    oldController.signal.addEventListener('abort', () => { aborted = true; });
-
-    // Neuer Request: alter Controller abbbrechen
-    oldController.abort();
-    assert.strictEqual(aborted, true);
-
-    // Neuer Controller wird erstellt
-    const newController = new AbortController();
-    assert.strictEqual(newController.signal.aborted, false);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Tests: Button grid layout verification
+// Button-Grid-Layout
 // ---------------------------------------------------------------------------
 
 describe('Button Grid and Layout', () => {
   it('should have 18 buttons in the grid (all unique actions)', () => {
-    // Aus calculator.tsx: buttons array mit 18 Einträgen, alle actions unique
     const buttons = [
       'clear', 'backspace', '÷',
       '7', '8', '9', '×',
@@ -351,29 +290,18 @@ describe('Button Grid and Layout', () => {
     assert.strictEqual(new Set(buttons).size, 18);
   });
 
-  it('should have exact button actions for calculator', () => {
-    const actions = ['clear', 'backspace', '÷', '7', '8', '9', '×',
-      '4', '5', '6', '-', '1', '2', '3', '+', '0', '.', '='];
-    // Der = button hat col-span-2
-    assert.strictEqual(actions[17], '=');
-    // clear, backspace, = haben spezielle Aktionen
-    assert.strictEqual(actions.includes('clear'), true);
-    assert.strictEqual(actions.includes('backspace'), true);
-    assert.strictEqual(actions.includes('='), true);
-  });
-
-  it('should mark operators with secondary variant', () => {
+  it('should mark operators with their variants', () => {
     const operatorVariants: Record<string, string> = {
-      'clear': 'destructive',
-      'backspace': 'secondary',
+      clear: 'destructive',
+      backspace: 'secondary',
       '÷': 'secondary',
       '×': 'secondary',
       '-': 'secondary',
       '+': 'secondary',
       '=': 'outline',
     };
-    assert.strictEqual(operatorVariants['clear'], 'destructive');
-    assert.strictEqual(operatorVariants['backspace'], 'secondary');
+    assert.strictEqual(operatorVariants.clear, 'destructive');
+    assert.strictEqual(operatorVariants.backspace, 'secondary');
     assert.strictEqual(operatorVariants['÷'], 'secondary');
     assert.strictEqual(operatorVariants['='], 'outline');
   });

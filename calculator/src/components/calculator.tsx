@@ -1,11 +1,14 @@
-import { useState, useCallback, useRef } from "react";
-import { Loader2 } from "lucide-react";
+import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { calculateExpression } from "@/lib/api";
-import { isOperator, parseBinaryExpression, formatNumber } from "@/lib/calculator";
+import {
+  isOperator,
+  parseBinaryExpression,
+  formatNumber,
+  calculate,
+} from "@/lib/calculator";
 import type { HistoryEntry } from "@/hooks/useHistory";
 
-type CalculatorState = "idle" | "loading" | "error" | "result";
+type CalculatorState = "idle" | "error" | "result";
 
 const buttons: {
   label: string;
@@ -41,7 +44,6 @@ export function Calculator({ onCalculate }: CalculatorProps) {
   const [state, setState] = useState<CalculatorState>("idle");
   const [expression, setExpression] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
-  const abortRef = useRef<AbortController | null>(null);
 
   const reset = useCallback(() => {
     setDisplay("0");
@@ -50,29 +52,16 @@ export function Calculator({ onCalculate }: CalculatorProps) {
     setErrorMessage("");
   }, []);
 
-  const handleEqual = useCallback(async () => {
+  const handleEqual = useCallback(() => {
     if (!expression.trim()) return;
 
-    // Cancel any in-flight request
-    abortRef.current?.abort();
-    const controller = new AbortController();
-    abortRef.current = controller;
-
-    setState("loading");
-    setErrorMessage("");
-
     try {
-      // Convert display operator symbols to parseable expression
-      // The backend expects infix notation with standard operators
-      const apiExpression = expression
-        .replace(/×/g, "*")
-        .replace(/÷/g, "/");
-
-      const result = await calculateExpression(apiExpression, controller.signal);
-
+      // Berechnung lokal und synchron über die pure Rechenlogik.
+      // Division durch Null wird von applyOperation mit einem Error abgefangen.
+      const result = calculate(expression);
       const resultStr = formatNumber(result);
 
-      // Create history entry from the display expression (with ×, ÷ operators)
+      // Verlaufseintrag aus dem sichtbaren Ausdruck (mit ×, ÷) erzeugen
       const parsed = parseBinaryExpression(expression);
       if (parsed) {
         const entry: HistoryEntry = {
@@ -88,19 +77,13 @@ export function Calculator({ onCalculate }: CalculatorProps) {
       setExpression(resultStr);
       setState("result");
     } catch (err) {
-      if (err instanceof DOMException && err.name === "AbortError") return;
-
       const msg =
         err instanceof Error ? err.message : "Ein Fehler ist aufgetreten";
       setDisplay("Fehler");
       setErrorMessage(msg);
       setState("error");
-    } finally {
-      if (abortRef.current === controller) {
-        abortRef.current = null;
-      }
     }
-  }, [expression]);
+  }, [expression, onCalculate]);
 
   const handleButton = useCallback(
     (action: string) => {
@@ -130,12 +113,9 @@ export function Calculator({ onCalculate }: CalculatorProps) {
       }
 
       if (action === "=") {
-        if (state === "loading") return;
         handleEqual();
         return;
       }
-
-      if (state === "loading") return;
 
       if (isOperator(action)) {
         if (expression === "" && action === "-") {
@@ -175,21 +155,13 @@ export function Calculator({ onCalculate }: CalculatorProps) {
       {/* Display */}
       <div className="bg-secondary rounded-lg p-4 mb-4 min-h-[5rem] flex flex-col items-end justify-end">
         <div
-          className={`text-right text-2xl font-mono break-all leading-relaxed flex items-center gap-2 ${
-            state === "error"
-              ? "text-destructive"
-              : "text-foreground"
+          className={`text-right text-2xl font-mono break-all leading-relaxed ${
+            state === "error" ? "text-destructive" : "text-foreground"
           }`}
           aria-live="polite"
           aria-atomic="true"
           role="status"
         >
-          {state === "loading" && (
-            <Loader2
-              className="h-5 w-5 animate-spin shrink-0"
-              aria-hidden="true"
-            />
-          )}
           <span>{display}</span>
         </div>
       </div>
@@ -208,16 +180,6 @@ export function Calculator({ onCalculate }: CalculatorProps) {
         </p>
       )}
 
-      {/* Loading indicator bar */}
-      {state === "loading" && (
-        <div className="mb-2 h-1 bg-primary/20 rounded-full overflow-hidden">
-          <div
-            className="h-full bg-primary rounded-full animate-pulse"
-            style={{ width: "60%" }}
-          />
-        </div>
-      )}
-
       {/* Button grid */}
       <div
         className="grid grid-cols-4 gap-2"
@@ -233,7 +195,6 @@ export function Calculator({ onCalculate }: CalculatorProps) {
               btn.action === "=" ? "col-span-2" : ""
             } ${btn.action === "clear" ? "text-destructive-foreground" : ""}`}
             onClick={() => handleButton(btn.action)}
-            disabled={state === "loading" && btn.action !== "clear"}
             aria-label={
               btn.action === "clear"
                 ? "Löschen"
