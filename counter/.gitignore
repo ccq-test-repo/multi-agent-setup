@@ -3,3 +3,6 @@ dist
 *.local
 
 coverage
+
+# Stryker mutation-testing temp/sandbox output
+.stryker-tmp
