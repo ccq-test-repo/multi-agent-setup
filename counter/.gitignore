@@ -6,3 +6,5 @@ coverage
 
 # Stryker mutation-testing temp/sandbox output
 .stryker-tmp
+# Stryker HTML/Mutation report (CI uploads it as an artifact instead)
+reports/
