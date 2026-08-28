@@ -3,68 +3,93 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import Counter from './Counter'
 
+/**
+ * Test-Suite fuer die Zaehler-Seite.
+ *
+ * WICHTIG zur Mutation-Score-Staerke (DoD: >= 70 % Mutation Score):
+ * `toHaveTextContent('1')` matcht als *Teilstring* — der Wert `-1` wuerde
+ * damit faelschlich als '1' durchgehen (falsch-gruen). Nur exakte Vergleiche
+ * (`textContent` strickt gleich) unterscheiden z. B. den uberlebenden Mutanten
+ * `c + 1` -> `c - 1`. Deshalb verwenden wir durchgaengig exakte String-/Wert-
+ * Vergleiche statt substring-basierter Matcher.
+ */
+
+/** Wert des "count"-Elements exakt auslesen. */
+function countText(): string {
+  return screen.getByTestId('count').textContent ?? ''
+}
+
+/** Am "Erhoehen"-Button n-mal klicken. */
+async function clickIncrease(user: ReturnType<typeof userEvent.setup>, n: number) {
+  const increase = screen.getByRole('button', { name: 'Erhoehen' })
+  for (let i = 0; i < n; i++) {
+    await user.click(increase)
+  }
+}
+
+function clickReset(user: ReturnType<typeof userEvent.setup>) {
+  return user.click(screen.getByRole('button', { name: 'Zuruecksetzen' }))
+}
+
 describe('Counter-Seite', () => {
-  it('zeigt die Ueberschrift "Zaehler" und einen Stand, der bei 0 startet', () => {
+  it('zeigt die Ueberschrift "Zaehler" und einen exakten Stand 0 beim Start', () => {
     render(<Counter />)
 
-    const heading = screen.getByRole('heading', { name: 'Zaehler' })
-    expect(heading).toBeInTheDocument()
-
-    const count = screen.getByTestId('count')
-    expect(count).toHaveTextContent('0')
+    expect(screen.getByRole('heading', { name: 'Zaehler' })).toBeInTheDocument()
+    // Exakter Wert: `-0` oder `0 ` (Leerraum) duerfen nicht durchrutschen.
+    expect(countText()).toBe('0')
   })
 
-  it('der Stand ist als Text mit der Test-ID "count" lesbar', () => {
+  it('gibt den Stand als reinen Text aus (kein Attribut, kein Zusatzzeichen)', () => {
     render(<Counter />)
 
-    const count = screen.getByTestId('count')
-    expect(count).toHaveTextContent('0')
-    // Der Stand wird als Text (nicht z. B. als Attribut) ausgegeben
-    expect(count.textContent).toBe('0')
+    // Exakt "0" — kein Leerraum, kein Substring-Problem.
+    expect(countText()).toBe('0')
   })
 
-  it('der Button "Erhoehen" erhoeht den Stand um 1', async () => {
+  it('der Button "Erhoehen" erhoeht den Stand von 0 auf exakt 1', async () => {
     const user = userEvent.setup()
     render(<Counter />)
 
-    const increase = screen.getByRole('button', { name: 'Erhoehen' })
-    await user.click(increase)
+    await clickIncrease(user, 1)
 
-    expect(screen.getByTestId('count')).toHaveTextContent('1')
+    // Exakt 1 — erkennt Mutanten `+ 1` -> `- 1` (waere -1) und `+1` -> `*1`/`/1`.
+    expect(countText()).toBe('1')
   })
 
-  it('mehrfaches Erhoehen erhoeht den Stand entsprechend', async () => {
+  it('mehrfaches Erhoehen erhoeht den Stand exakt 1 -> 2 -> 3', async () => {
     const user = userEvent.setup()
     render(<Counter />)
 
-    const increase = screen.getByRole('button', { name: 'Erhoehen' })
-    await user.click(increase)
-    await user.click(increase)
-    await user.click(increase)
+    await clickIncrease(user, 1)
+    expect(countText()).toBe('1')
 
-    expect(screen.getByTestId('count')).toHaveTextContent('3')
+    await clickIncrease(user, 1)
+    expect(countText()).toBe('2')
+
+    await clickIncrease(user, 1)
+    expect(countText()).toBe('3')
   })
 
-  it('der Button "Zuruecksetzen" setzt den Stand auf 0 zurueck', async () => {
+  it('der Button "Zuruecksetzen" setzt einen erhoehten Stand exakt auf 0 zurueck', async () => {
     const user = userEvent.setup()
     render(<Counter />)
 
-    await user.click(screen.getByRole('button', { name: 'Erhoehen' }))
-    await user.click(screen.getByRole('button', { name: 'Erhoehen' }))
-    expect(screen.getByTestId('count')).toHaveTextContent('2')
+    await clickIncrease(user, 2)
+    expect(countText()).toBe('2')
 
-    await user.click(screen.getByRole('button', { name: 'Zuruecksetzen' }))
+    await clickReset(user)
 
-    expect(screen.getByTestId('count')).toHaveTextContent('0')
+    expect(countText()).toBe('0')
   })
 
-  it('Zuruecksetzen bei Stand 0 laesst den Stand bei 0', async () => {
+  it('Zuruecksetzen bei Stand 0 laesst den Stand exakt bei 0', async () => {
     const user = userEvent.setup()
     render(<Counter />)
 
-    expect(screen.getByTestId('count')).toHaveTextContent('0')
-    await user.click(screen.getByRole('button', { name: 'Zuruecksetzen' }))
+    expect(countText()).toBe('0')
+    await clickReset(user)
 
-    expect(screen.getByTestId('count')).toHaveTextContent('0')
+    expect(countText()).toBe('0')
   })
 })

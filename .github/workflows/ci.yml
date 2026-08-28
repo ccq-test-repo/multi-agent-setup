@@ -1,0 +1,90 @@
+# Template — do not edit in the target project beyond replacing counter.
+# Action versions are pinned on purpose: agents must not invent them.
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: counter
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: counter/package-lock.json
+      - run: npm ci
+      - run: npm run build --if-present
+
+  test:
+    runs-on: ubuntu-latest
+    needs: build
+    defaults:
+      run:
+        working-directory: counter
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: counter/package-lock.json
+      - run: npm ci
+      # c8 --check-coverage fails the job below 80% lines.
+      - run: npm run test:coverage
+
+  quality:
+    runs-on: ubuntu-latest
+    needs: test
+    defaults:
+      run:
+        working-directory: counter
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: counter/package-lock.json
+      - run: npm ci
+      # thresholds.break in stryker.conf.json fails this job below 70%.
+      - run: npm run test:mutation
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: stryker-report
+          path: counter/reports/mutation/
+
+  security:
+    runs-on: ubuntu-latest
+    needs: build
+    defaults:
+      run:
+        working-directory: counter
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: counter/package-lock.json
+      - run: npm ci
+      # --omit=dev on purpose: the gate covers what ships, not the build tools.
+      # Stryker pulls in vulnerable transitive deps (@babel/core, ajv, tmp) that
+      # never reach a user, and without this the job is red on every project.
+      - run: npm audit --audit-level=high --omit=dev
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+      - uses: github/codeql-action/analyze@v3
