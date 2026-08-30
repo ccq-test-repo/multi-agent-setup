@@ -14,5 +14,7 @@ export default defineConfig({
     globals: true,
     environment: "jsdom",
     css: true,
+    setupFiles: ["./src/test/setup.ts"],
+    exclude: ["./e2e/**", "**/node_modules/**", "**/dist/**"],
   },
 } as import("vitest/config").UserConfig);
