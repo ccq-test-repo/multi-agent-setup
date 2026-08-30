@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "c8 --check-coverage --lines 80 --reporter=text --reporter=lcov npm test",
+    "test:coverage": "vitest run --coverage --coverage.provider=v8 --coverage.reporter=text --coverage.reporter=lcov --coverage.thresholds.lines=80",
     "lint": "eslint src/",
     "test:mutation": "stryker run"
   },
@@ -40,7 +40,7 @@
     "typescript-eslint": "^8.64.0",
     "vite": "^6.3.2",
     "vitest": "^4.1.10",
-    "c8": "10.1.3",
-    "@stryker-mutator/core": "8.7.1"
+    "@stryker-mutator/core": "8.7.1",
+    "@vitest/coverage-v8": "^4.1.11"
   }
 }
