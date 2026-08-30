@@ -1,0 +1,10 @@
+{
+  "$schema": "https://raw.githubusercontent.com/stryker-mutator/stryker-js/master/packages/api/schema/stryker-core.json",
+  "packageManager": "npm",
+  "testRunner": "command",
+  "commandRunner": { "command": "npm test" },
+  "reporters": ["html", "clear-text", "progress"],
+  "htmlReporter": { "fileName": "reports/mutation/index.html" },
+  "coverageAnalysis": "off",
+  "thresholds": { "high": 80, "low": 70, "break": 70 }
+}

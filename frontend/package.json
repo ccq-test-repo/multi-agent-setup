@@ -9,8 +9,9 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
-    "lint": "eslint src/"
+    "test:coverage": "vitest run --coverage --coverage.provider=v8 --coverage.reporter=text --coverage.reporter=lcov --coverage.thresholds.lines=80",
+    "lint": "eslint src/",
+    "test:mutation": "stryker run"
   },
   "dependencies": {
     "class-variance-authority": "^0.7.1",
@@ -38,6 +39,8 @@
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.64.0",
     "vite": "^6.3.2",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.10",
+    "@stryker-mutator/core": "8.7.1",
+    "@vitest/coverage-v8": "^4.1.11"
   }
 }
