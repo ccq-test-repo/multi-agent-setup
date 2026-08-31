@@ -65,6 +65,32 @@ describe("calculate()", () => {
     ).rejects.toThrow("Server-Fehler (HTTP 500)");
   });
 
+  it("zeigt Server-Fehler (Kurzname), wenn der Fehler-Body nur error ohne message enthält", async () => {
+    mockFetch(async () =>
+      new Response(JSON.stringify({ error: "DIVISION_BY_ZERO" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    await expect(
+      calculate({ left: 5, operator: "DIVIDE", right: 0 }),
+    ).rejects.toThrow("Server-Fehler (DIVISION_BY_ZERO)");
+  });
+
+  it("wirft den Fallback, wenn der Fehler-Body weder message noch error enthält", async () => {
+    mockFetch(async () =>
+      new Response(JSON.stringify({ foo: "bar" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    await expect(
+      calculate({ left: 1, operator: "ADD", right: 1 }),
+    ).rejects.toThrow("Server-Fehler (HTTP 400)");
+  });
+
   it("reicht ein AbortSignal an fetch weiter", async () => {
     const controller = new AbortController();
     let passedSignal: unknown = null;
@@ -101,6 +127,16 @@ describe("health()", () => {
     mockFetch(async () => {
       throw new TypeError("Network error");
     });
+    await expect(health()).resolves.toBe(false);
+  });
+
+  it("liefert false, wenn das Backend einen anderen Status als UP meldet", async () => {
+    mockFetch(async () =>
+      new Response(JSON.stringify({ status: "DOWN" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
     await expect(health()).resolves.toBe(false);
   });
 });
